@@ -11,6 +11,8 @@
 #define BOOST_BEAST_IMPL_FLAT_STATIC_BUFFER_IPP
 
 #include <boost/beast/core/flat_static_buffer.hpp>
+#include <boost/beast/core/detail/clamp.hpp>
+#include <boost/assert.hpp>
 #include <boost/throw_exception.hpp>
 #include <algorithm>
 #include <cstring>
@@ -37,26 +39,90 @@ clear() noexcept
     last_ = begin_;
 }
 
+#ifndef BOOST_ASIO_NO_DYNAMIC_BUFFER_V1
+
 auto
 flat_static_buffer_base::
 prepare(std::size_t n) ->
     mutable_buffers_type
 {
+    auto const len = size();
+    if(detail::sum_exceeds(len, n, max_size()))
+        BOOST_THROW_EXCEPTION(std::length_error{
+            "flat_static_buffer_base too big"});
+    grow(n);
+    out_ = in_ + len;
+    BOOST_ASSERT(out_ <= end_);
+    BOOST_ASSERT(last_ == out_ + n);
+    BOOST_ASSERT(last_ <= end_);
+    return {out_, n};
+}
+
+#endif
+
+auto
+flat_static_buffer_base::
+data(std::size_t pos, std::size_t n) noexcept ->
+    mutable_buffers_type
+{
+    auto const len = size();
+    if(pos > len)
+        return {};
+    if(detail::sum_exceeds(pos, n, len))
+        n = len - pos;
+    return mutable_buffers_type{
+        in_ + pos, n };
+}
+
+auto
+flat_static_buffer_base::
+data(std::size_t pos, std::size_t n) const noexcept ->
+    const_buffers_type
+{
+    auto const len = size();
+    if(pos > len)
+        return {};
+    if(detail::sum_exceeds(pos, n, len))
+        n = len - pos;
+    return const_buffers_type{
+        in_ + pos, n };
+}
+
+void
+flat_static_buffer_base::
+grow(std::size_t n)
+{
+    auto const len = size();
+    if(detail::sum_exceeds(len, n, max_size()))
+        BOOST_THROW_EXCEPTION(std::length_error{
+            "basic_flat_buffer too big"});
     if(n <= dist(out_, end_))
     {
-        last_ = out_ + n;
-        return {out_, n};
+        out_ = out_ + n;
+        last_ = out_;
+        return;
     }
-    auto const len = size();
     if(n > capacity() - len)
         BOOST_THROW_EXCEPTION(std::length_error{
-            "buffer overflow"});
+            "basic_flat_buffer overflow"});
     if(len > 0)
         std::memmove(begin_, in_, len);
     in_ = begin_;
-    out_ = in_ + len;
-    last_ = out_ + n;
-    return {out_, n};
+    out_ = in_ + len + n;
+    last_ = out_;
+}
+
+void
+flat_static_buffer_base::
+shrink(std::size_t n)
+{
+    if(n >= capacity())
+    {
+        clear();
+        return;
+    }
+    out_ = in_ + size() - n;
+    last_ = out_;
 }
 
 void
@@ -66,7 +132,8 @@ consume(std::size_t n) noexcept
     if(n >= size())
     {
         in_ = begin_;
-        out_ = in_;
+        out_ = begin_;
+        last_ = begin_;
         return;
     }
     in_ += n;

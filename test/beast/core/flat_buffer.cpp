@@ -35,6 +35,7 @@ public:
         flat_buffer b(30);
         BEAST_EXPECT(b.max_size() == 30);
         test_dynamic_buffer(b);
+        test_dynamic_buffer_v2(b);
     }
 
     void

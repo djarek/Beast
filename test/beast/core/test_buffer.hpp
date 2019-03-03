@@ -576,6 +576,52 @@ test_dynamic_buffer(
         is_mutable_dynamic_buffer<DynamicBuffer>{});
 }
 
+template<class DynamicBuffer>
+void
+test_dynamic_buffer_v2(
+    DynamicBuffer const& b0)
+{
+    DynamicBuffer b(b0);
+    auto const& b1 = b;
+
+    b.grow(0);
+    BEAST_EXPECT(b.size() == 0);
+    BEAST_EXPECT(buffer_size( b.data(0, 0)) == 0);
+    BEAST_EXPECT(buffer_size( b.data(1, 0)) == 0);
+    BEAST_EXPECT(buffer_size( b.data(1, 1)) == 0);
+    BEAST_EXPECT(buffer_size(b1.data(0, 0)) == 0);
+    BEAST_EXPECT(buffer_size(b1.data(1, 0)) == 0);
+    BEAST_EXPECT(buffer_size(b1.data(1, 1)) == 0);
+
+    b.grow(10);
+    BEAST_EXPECT(b.size() == 10);
+    BEAST_EXPECT(buffer_size( b.data(0, 0)) == 0);
+    BEAST_EXPECT(buffer_size( b.data(1, 0)) == 0);
+    BEAST_EXPECT(buffer_size( b.data(1, 1)) == 1);
+    BEAST_EXPECT(buffer_size( b.data(0, 10)) == 10);
+    BEAST_EXPECT(buffer_size( b.data(0, 20)) == 10);
+    BEAST_EXPECT(buffer_size( b.data(1, 20)) == 9);
+    BEAST_EXPECT(buffer_size( b.data(10, 0)) == 0);
+    BEAST_EXPECT(buffer_size( b.data(10, 10)) == 0);
+    BEAST_EXPECT(buffer_size(b1.data(0, 0)) == 0);
+    BEAST_EXPECT(buffer_size(b1.data(1, 0)) == 0);
+    BEAST_EXPECT(buffer_size(b1.data(1, 1)) == 1);
+    BEAST_EXPECT(buffer_size(b1.data(0, 10)) == 10);
+    BEAST_EXPECT(buffer_size(b1.data(0, 20)) == 10);
+    BEAST_EXPECT(buffer_size(b1.data(1, 20)) == 9);
+    BEAST_EXPECT(buffer_size(b1.data(10, 0)) == 0);
+    BEAST_EXPECT(buffer_size(b1.data(10, 10)) == 0);
+
+    b.shrink(1);
+    BEAST_EXPECT(b.size() == 9);
+    b.shrink(2);
+    BEAST_EXPECT(b.size() == 7);
+    b.consume(3);
+    BEAST_EXPECT(b.size() == 4);
+    b.consume(50);
+    BEAST_EXPECT(b.size() == 0);
+}
+
 } // beast
 } // boost
 

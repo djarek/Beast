@@ -40,6 +40,7 @@ public:
     testDynamicBuffer()
     {
         test_dynamic_buffer(static_buffer<13>{});
+        test_dynamic_buffer_v2(static_buffer<13>{});
     }
 
     void

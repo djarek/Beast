@@ -438,6 +438,8 @@ public:
     std::size_t
     capacity() const noexcept;
 
+#ifndef BOOST_ASIO_NO_DYNAMIC_BUFFER_V1
+
     /** Returns a constant buffer sequence representing the readable bytes
 
         @note The sequence may contain multiple contiguous memory regions.
@@ -505,6 +507,62 @@ public:
     */
     void
     commit(size_type n) noexcept;
+
+#endif
+
+    /** Return a constant buffer sequence representing the underlying memory.
+
+        The returned buffer sequence `u` represents the underlying
+        memory beginning at offset `pos` and where `buffer_size(u) <= n`.
+
+        @param pos The offset to start from. If this is larger than
+        the size of the underlying memory, an empty buffer sequence
+        is returned.
+
+        @param n The maximum number of bytes in the returned sequence,
+        starting from `pos`.
+
+        @return The constant buffer sequence
+    */
+    const_buffers_type
+    data(std::size_t pos, std::size_t n) const noexcept;
+
+    /** Return a mutable buffer sequence representing the underlying memory.
+
+        The returned buffer sequence `u` represents the underlying
+        memory beginning at offset `pos` and where `buffer_size(u) <= n`.
+
+        @param pos The offset to start from. If this is larger than
+        the size of the underlying memory, an empty buffer sequence
+        is returned.
+
+        @param n The maximum number of bytes in the returned sequence,
+        starting from `pos`.
+
+        @return The mutable buffer sequence
+    */
+    mutable_buffers_type
+    data(std::size_t pos, std::size_t n) noexcept;
+
+    /** Extend the underlying memory to accommodate additional bytes.
+
+        @param n The number of additional bytes to extend by.
+
+        @throws `length_error` if `size() + n > max_size()`.
+    */
+    void
+    grow(std::size_t n);
+
+    /** Remove bytes from the end of the underlying memory.
+
+        This removes bytes from the end of the underlying memory. If
+        the number of bytes to remove is larger than `size()`, then
+        all underlying memory is emptied.
+
+        @param n The number of bytes to remove.
+    */
+    void
+    shrink(std::size_t n);
 
     /** Remove bytes from beginning of the readable bytes.
 

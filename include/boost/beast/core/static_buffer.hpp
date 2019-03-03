@@ -130,6 +130,8 @@ public:
         return capacity_;
     }
 
+#ifndef BOOST_ASIO_NO_DYNAMIC_BUFFER_V1
+
     /// Returns a constant buffer sequence representing the readable bytes
     BOOST_BEAST_DECL
     const_buffers_type
@@ -190,6 +192,66 @@ public:
     BOOST_BEAST_DECL
     void
     commit(std::size_t n) noexcept;
+
+#endif
+
+    /** Return a constant buffer sequence representing the underlying memory.
+
+        The returned buffer sequence `u` represents the underlying
+        memory beginning at offset `pos` and where `buffer_size(u) <= n`.
+
+        @param pos The offset to start from. If this is larger than
+        the size of the underlying memory, an empty buffer sequence
+        is returned.
+
+        @param n The maximum number of bytes in the returned sequence,
+        starting from `pos`.
+
+        @return The constant buffer sequence
+    */
+    BOOST_BEAST_DECL
+    const_buffers_type
+    data(std::size_t pos, std::size_t n) const noexcept;
+
+    /** Return a mutable buffer sequence representing the underlying memory.
+
+        The returned buffer sequence `u` represents the underlying
+        memory beginning at offset `pos` and where `buffer_size(u) <= n`.
+
+        @param pos The offset to start from. If this is larger than
+        the size of the underlying memory, an empty buffer sequence
+        is returned.
+
+        @param n The maximum number of bytes in the returned sequence,
+        starting from `pos`.
+
+        @return The mutable buffer sequence
+    */
+    BOOST_BEAST_DECL
+    mutable_buffers_type
+    data(std::size_t pos, std::size_t n) noexcept;
+
+    /** Extend the underlying memory to accommodate additional bytes.
+
+        @param n The number of additional bytes to extend by.
+
+        @throws `length_error` if `size() + n > max_size()`.
+    */
+    BOOST_BEAST_DECL
+    void
+    grow(std::size_t n);
+
+    /** Remove bytes from the end of the underlying memory.
+
+        This removes bytes from the end of the underlying memory. If
+        the number of bytes to remove is larger than `size()`, then
+        all underlying memory is emptied.
+
+        @param n The number of bytes to remove.
+    */
+    BOOST_BEAST_DECL
+    void
+    shrink(std::size_t n);
 
     /** Remove bytes from beginning of the readable bytes.
 
