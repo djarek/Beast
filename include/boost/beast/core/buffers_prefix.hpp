@@ -17,12 +17,16 @@
 #include <cstdint>
 #include <type_traits>
 
+#include <boost/beast/core/buffers_subrange.hpp>
+
 #if BOOST_WORKAROUND(BOOST_MSVC, < 1910)
 #include <boost/type_traits.hpp>
 #endif
 
 namespace boost {
 namespace beast {
+
+#if 0
 
 /** A buffer sequence adaptor that shortens the sequence size.
 
@@ -135,6 +139,38 @@ public:
     }
 #endif
 };
+
+#else
+
+template<class BufferSequence>
+class buffers_prefix_view
+    : public buffers_subrange<BufferSequence>
+{
+public:
+    buffers_prefix_view(
+        std::size_t size,
+        BufferSequence const& buffers)
+        : buffers_subrange<BufferSequence>(
+            buffers, 0, size)
+    {
+    }
+
+    template<class... Args>
+    buffers_prefix_view(
+        std::size_t size,
+        boost::in_place_init_t,
+        Args&&... args)
+        : buffers_subrange<BufferSequence>(
+            BufferSequence(std::forward<
+                Args>(args)...), 0, size)
+    {
+    }
+
+    buffers_prefix_view(buffers_prefix_view const&) = default;
+    buffers_prefix_view& operator=(buffers_prefix_view const&) = default;
+};
+
+#endif
 
 //------------------------------------------------------------------------------
 

@@ -62,7 +62,7 @@ public:
                 }
             };
 
-            buffers_suffix<test_buffer> cb;
+            buffers_suffix<test_buffer> cb(test_buffer{});
             BEAST_EXPECT(buffers_to_string(cb) == "\r\n");
             cb.consume(1);
             BEAST_EXPECT(buffers_to_string(cb) == "\n");
@@ -93,7 +93,8 @@ public:
     template<class BufferSequence>
     static
     buffers_suffix<BufferSequence>
-    consumed_buffers(BufferSequence const& bs, std::size_t n)
+    consumed_buffers(
+        BufferSequence const& bs, std::size_t n)
     {
         buffers_suffix<BufferSequence> cb(bs);
         cb.consume(n);

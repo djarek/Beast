@@ -83,6 +83,13 @@ transferred.
     range object is destroyed).
 ]]
 [[
+    [link beast.ref.boost__beast__buffers_subrange `buffers_subrange`]
+    [link beast.ref.boost__beast__make_buffers_subrange `make_buffers_subrange`]
+][
+    This view adapter represents a subset of a given buffer sequence.
+    Bytes may be removed from the beginning of the view iteratively.
+]]
+[[
     [link beast.ref.boost__beast__buffers_suffix `buffers_suffix`]
 ][
     This class wraps the underlying memory of an existing buffer sequence

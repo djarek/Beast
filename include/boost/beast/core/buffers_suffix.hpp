@@ -12,6 +12,7 @@
 
 #include <boost/beast/core/detail/config.hpp>
 #include <boost/beast/core/buffer_traits.hpp>
+#include <boost/beast/core/buffers_subrange.hpp>
 #include <boost/optional.hpp>
 #include <cstdint>
 #include <iterator>
@@ -19,6 +20,8 @@
 
 namespace boost {
 namespace beast {
+
+#if 0
 
 /** Adaptor to progressively trim the front of a <em>BufferSequence</em>.
 
@@ -137,10 +140,40 @@ public:
     void
     consume(std::size_t amount);
 };
+#else
+
+template<class BufferSequence>
+class buffers_suffix
+    : public buffers_subrange<BufferSequence>
+{
+public:
+    buffers_suffix(
+        BufferSequence const& buffers)
+        : buffers_subrange<BufferSequence>(
+            buffers)
+    {
+    }
+
+    template<class... Args>
+    buffers_suffix(
+        boost::in_place_init_t,
+        Args&&... args)
+        : buffers_subrange<BufferSequence>(
+            BufferSequence(std::forward<
+                Args>(args)...))
+    {
+    }
+
+    buffers_suffix(buffers_suffix const&) = default;
+    buffers_suffix& operator=(buffers_suffix const&) = default;
+};
+
+#endif
+
 
 } // beast
 } // boost
 
-#include <boost/beast/core/impl/buffers_suffix.hpp>
+//#include <boost/beast/core/impl/buffers_suffix.hpp>
 
 #endif

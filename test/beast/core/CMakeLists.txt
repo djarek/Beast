@@ -41,6 +41,7 @@ add_executable (tests-beast-core
     buffers_cat.cpp
     buffers_prefix.cpp
     buffers_range.cpp
+    buffers_subrange.cpp
     buffers_suffix.cpp
     buffers_to_string.cpp
     detect_ssl.cpp

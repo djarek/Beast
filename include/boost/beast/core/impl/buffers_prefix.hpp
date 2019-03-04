@@ -22,6 +22,8 @@
 namespace boost {
 namespace beast {
 
+#if 0
+
 template<class Buffers>
 class buffers_prefix_view<Buffers>::const_iterator
 {
@@ -247,6 +249,8 @@ end() const ->
     return const_iterator{
         *this, std::true_type{}};
 }
+
+#endif
 
 //------------------------------------------------------------------------------
 
