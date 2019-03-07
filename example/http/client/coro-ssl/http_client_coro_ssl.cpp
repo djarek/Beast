@@ -103,7 +103,7 @@ do_session(
     beast::flat_buffer b;
 
     // Declare a container to hold the response
-    http::response<http::dynamic_body> res;
+    http::response<http::string_body> res;
 
     // Receive the HTTP response
     http::async_read(stream, b, res, yield[ec]);

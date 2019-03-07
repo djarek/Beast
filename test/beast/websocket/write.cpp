@@ -10,10 +10,10 @@
 // Test that header file is self-contained.
 #include <boost/beast/websocket/stream.hpp>
 
+#include "test.hpp"
+#include <boost/beast/core/flat_buffer.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/strand.hpp>
-
-#include "test.hpp"
 
 namespace boost {
 namespace beast {
@@ -58,7 +58,7 @@ public:
             ws.binary(false);
             std::string const s = "Hello, world!";
             w.write(ws, net::buffer(s));
-            multi_buffer b;
+            flat_buffer b;
             w.read(ws, b);
             BEAST_EXPECT(ws.got_text());
             BEAST_EXPECT(buffers_to_string(b.data()) == s);
@@ -70,7 +70,7 @@ public:
         {
             ws.text(true);
             w.write(ws, net::const_buffer{});
-            multi_buffer b;
+            flat_buffer b;
             w.read(ws, b);
             BEAST_EXPECT(ws.got_text());
             BEAST_EXPECT(b.size() == 0);
@@ -85,7 +85,7 @@ public:
             std::string const s = "Hello, world!";
             w.write_some(ws, false, net::buffer(s.data(), 5));
             w.write_some(ws, true, net::buffer(s.data() + 5, s.size() - 5));
-            multi_buffer b;
+            flat_buffer b;
             w.read(ws, b);
             BEAST_EXPECT(ws.got_text());
             BEAST_EXPECT(buffers_to_string(b.data()) == s);
@@ -374,7 +374,7 @@ public:
             ws.next_layer().append(string_view{
                 "\x89\x00" "\x81\x01*", 5});
             std::size_t count = 0;
-            multi_buffer b;
+            flat_buffer b;
             ws.async_read(b,
                 [&](error_code ec, std::size_t)
                 {
@@ -631,7 +631,7 @@ public:
                 return;
             ws.write_some(false, sbuf("u"));
             ws.write_some(true, sbuf("v"));
-            multi_buffer b;
+            flat_buffer b;
             ws.read(b, ec);
             BEAST_EXPECTS(! ec, ec.message());
         }

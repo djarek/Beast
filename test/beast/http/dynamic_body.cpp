@@ -10,6 +10,8 @@
 // Test that header file is self-contained.
 #include <boost/beast/http/dynamic_body.hpp>
 
+#ifndef BOOST_BEAST_NO_MULTI_BUFFER
+
 #include <boost/beast/core/buffers_to_string.hpp>
 #include <boost/beast/core/ostream.hpp>
 #include <boost/beast/http/fields.hpp>
@@ -62,3 +64,5 @@ BEAST_DEFINE_TESTSUITE(beast,http,dynamic_body);
 } // http
 } // beast
 } // boost
+
+#endif

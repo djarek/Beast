@@ -826,6 +826,7 @@ public:
     void
     testLimits()
     {
+    #ifndef BOOST_BEAST_NO_MULTI_BUFFER
         {
             multi_buffer b;
             ostream(b) << 
@@ -883,6 +884,7 @@ public:
             p.put(b.data(), ec);
             BEAST_EXPECTS(ec == error::body_limit, ec.message());
         }
+    #endif
     }
 
     //--------------------------------------------------------------------------

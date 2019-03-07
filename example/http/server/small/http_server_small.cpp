@@ -69,10 +69,10 @@ private:
     beast::flat_buffer buffer_{8192};
 
     // The request message.
-    http::request<http::dynamic_body> request_;
+    http::request<http::string_body> request_;
 
     // The response message.
-    http::response<http::dynamic_body> response_;
+    http::response<http::string_body> response_;
 
     // The timer for putting a deadline on connection processing.
     net::basic_waitable_timer<std::chrono::steady_clock> deadline_{
@@ -117,10 +117,12 @@ private:
             // we do not recognize the request method.
             response_.result(http::status::bad_request);
             response_.set(http::field::content_type, "text/plain");
-            beast::ostream(response_.body())
+            std::stringstream ss;
+            ss
                 << "Invalid request-method '"
                 << std::string(request_.method_string())
                 << "'";
+            response_.body() = ss.str();
             break;
         }
 
@@ -134,7 +136,8 @@ private:
         if(request_.target() == "/count")
         {
             response_.set(http::field::content_type, "text/html");
-            beast::ostream(response_.body())
+            std::stringstream ss;
+            ss
                 << "<html>\n"
                 <<  "<head><title>Request count</title></head>\n"
                 <<  "<body>\n"
@@ -144,11 +147,13 @@ private:
                 <<  " requests so far.</p>\n"
                 <<  "</body>\n"
                 <<  "</html>\n";
+            response_.body() = ss.str();
         }
         else if(request_.target() == "/time")
         {
             response_.set(http::field::content_type, "text/html");
-            beast::ostream(response_.body())
+            std::stringstream ss;
+            ss
                 <<  "<html>\n"
                 <<  "<head><title>Current time</title></head>\n"
                 <<  "<body>\n"
@@ -158,13 +163,15 @@ private:
                 <<  " seconds since the epoch.</p>\n"
                 <<  "</body>\n"
                 <<  "</html>\n";
+            response_.body() = ss.str();
         }
         else
         {
             response_.result(http::status::not_found);
             response_.set(http::field::content_type, "text/plain");
-            beast::ostream(response_.body()) << "File not found\r\n";
+            response_.body() = "File not found\r\n";
         }
+        response_.prepare_payload();
     }
 
     // Asynchronously transmit the response message.

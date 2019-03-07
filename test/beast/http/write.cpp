@@ -18,7 +18,7 @@
 #include <boost/beast/http/string_body.hpp>
 #include <boost/beast/core/buffers_to_string.hpp>
 #include <boost/beast/core/error.hpp>
-#include <boost/beast/core/multi_buffer.hpp>
+#include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/_experimental/test/stream.hpp>
 #include <boost/beast/test/yield_to.hpp>
 #include <boost/beast/_experimental/unit_test/suite.hpp>
@@ -271,7 +271,7 @@ public:
         test::stream ts{ioc_, sv}, tr{ioc_};
         ts.connect(tr);
         message<isRequest, string_body, fields> m;
-        multi_buffer b;
+        flat_buffer b;
         ts.close_remote();
         try
         {

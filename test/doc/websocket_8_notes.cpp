@@ -43,7 +43,7 @@ snippets()
     //]
     }
 
-    multi_buffer b;
+    flat_buffer b;
 
     {
     //[code_websocket_8_2
@@ -71,7 +71,7 @@ snippets()
 //[code_websocket_8_1f
 
 void echo(stream<tcp_stream>& ws,
-    multi_buffer& buffer, net::yield_context yield)
+    flat_buffer& buffer, net::yield_context yield)
 {
     ws.async_read(buffer, yield);
     std::future<std::size_t> fut =

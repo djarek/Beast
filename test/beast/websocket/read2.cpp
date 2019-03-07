@@ -11,7 +11,7 @@
 #include <boost/beast/websocket/stream.hpp>
 
 #include "test.hpp"
-
+#include <boost/beast/core/flat_buffer.hpp>
 #include <boost/asio/write.hpp>
 
 #include <boost/config/workaround.hpp>
@@ -38,7 +38,7 @@ public:
     {
         try
         {
-            multi_buffer b;
+            flat_buffer b;
             w.read(ws, b);
             fail("", __FILE__, __LINE__);
         }
@@ -60,7 +60,7 @@ public:
     {
         try
         {
-            multi_buffer b;
+            flat_buffer b;
             w.read(ws, b);
             fail("", __FILE__, __LINE__);
         }
@@ -88,7 +88,7 @@ public:
             ws.close({});
             try
             {
-                multi_buffer b;
+                flat_buffer b;
                 w.read(ws, b);
                 fail("", __FILE__, __LINE__);
             }
@@ -107,7 +107,7 @@ public:
             ws.next_layer().append(
                 string_view(
                     "\x01\x00" "\x80\x00", 4));
-            multi_buffer b;
+            flat_buffer b;
             w.read(ws, b);
             BEAST_EXPECT(b.size() == 0);
         });
@@ -123,7 +123,7 @@ public:
                 "\xd5"));
             w.write_raw(ws, sbuf(
                 "\x80\x81\xff\xff\xff\xff\xd5"));
-            multi_buffer b;
+            flat_buffer b;
             w.read(ws, b);
             BEAST_EXPECT(buffers_to_string(b.data()) == "**");
         });
@@ -143,7 +143,7 @@ public:
                     invoked = true;
                 });
             w.write(ws, sbuf("Hello"));
-            multi_buffer b;
+            flat_buffer b;
             w.read(ws, b);
             BEAST_EXPECT(invoked);
             BEAST_EXPECT(ws.got_text());
@@ -184,7 +184,7 @@ public:
             w.ping(ws, "");
             ws.binary(true);
             w.write(ws, sbuf("Hello"));
-            multi_buffer b;
+            flat_buffer b;
             w.read(ws, b);
             BEAST_EXPECT(once);
             BEAST_EXPECT(ws.got_binary());
@@ -208,7 +208,7 @@ public:
             w.write_some(ws, false, sbuf("Hello, "));
             w.write_some(ws, false, sbuf(""));
             w.write_some(ws, true, sbuf("World!"));
-            multi_buffer b;
+            flat_buffer b;
             w.read(ws, b);
             BEAST_EXPECT(once);
             BEAST_EXPECT(buffers_to_string(b.data()) == "Hello, World!");
@@ -229,7 +229,7 @@ public:
                 ws.auto_fragment(false);
                 ws.binary(false);
                 w.write(ws, net::buffer(s));
-                multi_buffer b;
+                flat_buffer b;
                 w.read(ws, b);
                 BEAST_EXPECT(ws.got_text());
                 BEAST_EXPECT(buffers_to_string(b.data()) == s);
@@ -253,7 +253,7 @@ public:
             // Cause close to be received
             es.async_close();
             std::size_t count = 0;
-            multi_buffer b;
+            flat_buffer b;
             ws.async_read(b,
                 [&](error_code ec, std::size_t)
                 {
@@ -271,7 +271,7 @@ public:
         [&](ws_type_t<deflateSupported>& ws)
         {
             w.close(ws, {});
-            multi_buffer b;
+            flat_buffer b;
             doFailTest(w, ws,
                 net::error::operation_aborted);
         });
@@ -286,7 +286,7 @@ public:
             w.write(ws, net::buffer(s));
             try
             {
-                multi_buffer b(3);
+                flat_buffer b(3);
                 w.read(ws, b);
                 fail("", __FILE__, __LINE__);
             }
@@ -373,7 +373,7 @@ public:
                 "\x81\x7e\x0f\xa1" +
                 std::string(4000, '*') + "\xc0";
             ws.next_layer().append(s);
-            multi_buffer b;
+            flat_buffer b;
             try
             {
                 do
@@ -488,7 +488,7 @@ public:
             auto const& s = random_string();
             ws.binary(true);
             w.write(ws, net::buffer(s));
-            multi_buffer b;
+            flat_buffer b;
             w.read(ws, b);
             BEAST_EXPECT(buffers_to_string(b.data()) == s);
         });
@@ -508,7 +508,7 @@ public:
             ws.auto_fragment(false);
             ws.binary(false);
             w.write(ws, net::buffer(s));
-            multi_buffer b;
+            flat_buffer b;
             w.read(ws, b);
             BEAST_EXPECT(ws.got_text());
             BEAST_EXPECT(buffers_to_string(b.data()) == s);
@@ -529,7 +529,7 @@ public:
                 ws.auto_fragment(false);
                 ws.binary(false);
                 w.write(ws, net::buffer(s));
-                multi_buffer b;
+                flat_buffer b;
                 w.read(ws, b);
                 BEAST_EXPECT(ws.got_text());
                 BEAST_EXPECT(buffers_to_string(b.data()) == s);
@@ -548,7 +548,7 @@ public:
             std::string const s = "";
             ws.text(true);
             w.write(ws, net::buffer(s));
-            multi_buffer b;
+            flat_buffer b;
             w.read(ws, b);
             BEAST_EXPECT(ws.got_text());
             BEAST_EXPECT(buffers_to_string(b.data()) == s);
@@ -573,7 +573,7 @@ public:
         {
             std::string const s = "Hello, world!";
             w.write(ws, net::buffer(s));
-            multi_buffer b;
+            flat_buffer b;
             auto bytes_written =
                 w.read_some(ws, 3, b);
             BEAST_EXPECT(bytes_written > 0);
@@ -589,7 +589,7 @@ public:
             auto const& s = random_string();
             ws.binary(true);
             w.write(ws, net::buffer(s));
-            multi_buffer b;
+            flat_buffer b;
             w.read(ws, b);
             BEAST_EXPECT(buffers_to_string(b.data()) == s);
         });

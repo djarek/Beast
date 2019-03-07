@@ -10,7 +10,7 @@
 // Test that header file is self-contained.
 #include <boost/beast/core/buffered_read_stream.hpp>
 
-#include <boost/beast/core/multi_buffer.hpp>
+#include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/_experimental/test/stream.hpp>
 #include <boost/beast/_experimental/unit_test/suite.hpp>
 #include <boost/beast/core/bind_handler.hpp>
@@ -36,8 +36,8 @@ public:
     {
         net::io_context ioc;
         {
-            buffered_read_stream<test::stream, multi_buffer> srs(ioc);
-            buffered_read_stream<test::stream, multi_buffer> srs2(std::move(srs));
+            buffered_read_stream<test::stream, flat_buffer> srs(ioc);
+            buffered_read_stream<test::stream, flat_buffer> srs2(std::move(srs));
             srs = std::move(srs2);
             BEAST_EXPECT(&srs.get_executor().context() == &ioc);
             BEAST_EXPECT(
@@ -45,7 +45,7 @@ public:
         }
         {
             test::stream ts{ioc};
-            buffered_read_stream<test::stream&, multi_buffer> srs(ts);
+            buffered_read_stream<test::stream&, flat_buffer> srs(ts);
         }
     }
 
@@ -60,7 +60,7 @@ public:
         boost::optional<test::stream> ts_;
         boost::optional<test::fail_count> fc_;
         boost::optional<buffered_read_stream<
-            test::stream&, multi_buffer>> brs_;
+            test::stream&, flat_buffer>> brs_;
 
         loop(
             unit_test::suite& suite,
@@ -130,7 +130,7 @@ public:
             test::fail_count fc{n};
             test::stream ts(ioc_, fc, ", world!");
             buffered_read_stream<
-                test::stream&, multi_buffer> srs(ts);
+                test::stream&, flat_buffer> srs(ts);
             srs.buffer().commit(net::buffer_copy(
                 srs.buffer().prepare(5), net::buffer("Hello", 5)));
             error_code ec = test::error::test_failure;
@@ -148,7 +148,7 @@ public:
             test::fail_count fc{n};
             test::stream ts(ioc_, fc, ", world!");
             buffered_read_stream<
-                test::stream&, multi_buffer> srs(ts);
+                test::stream&, flat_buffer> srs(ts);
             srs.capacity(3);
             srs.buffer().commit(net::buffer_copy(
                 srs.buffer().prepare(5), net::buffer("Hello", 5)));
@@ -167,7 +167,7 @@ public:
             test::fail_count fc{n};
             test::stream ts(ioc_, fc, ", world!");
             buffered_read_stream<
-                test::stream&, multi_buffer> srs(ts);
+                test::stream&, flat_buffer> srs(ts);
             srs.buffer().commit(net::buffer_copy(
                 srs.buffer().prepare(5), net::buffer("Hello", 5)));
             error_code ec = test::error::test_failure;
@@ -186,7 +186,7 @@ public:
             test::fail_count fc{n};
             test::stream ts(ioc_, fc, ", world!");
             buffered_read_stream<
-                test::stream&, multi_buffer> srs(ts);
+                test::stream&, flat_buffer> srs(ts);
             srs.capacity(3);
             srs.buffer().commit(net::buffer_copy(
                 srs.buffer().prepare(5), net::buffer("Hello", 5)));

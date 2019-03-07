@@ -214,11 +214,13 @@ public:
                 std::right << std::setw(15) << "with hint" <<
                 std::right << std::setw(15) << "random" <<
                 std::endl;
+        #ifndef BOOST_BEAST_NO_MULTI_BUFFER
             do_trials("multi_buffer", trials,
                  [&](){ return do_prepares<multi_buffer>(repeat, count, size); }
                 ,[&](){ return do_hints   <multi_buffer>(repeat, count, size); }
                 ,[&](){ return do_random  <multi_buffer>(repeat, count, size); }
             );
+        #endif
             do_trials("flat_buffer", trials,
                  [&](){ return do_prepares<flat_buffer>(repeat, count, size); }
                 ,[&](){ return do_hints   <flat_buffer>(repeat, count, size); }

@@ -38,7 +38,9 @@ public:
     {
         check<flat_buffer>();
         check<flat_static_buffer<1024>>();
+    #ifndef BOOST_BEAST_NO_MULTI_BUFFER
         check<multi_buffer>();
+    #endif
         check<static_buffer<1024>>();
         check<net::streambuf>();
     }

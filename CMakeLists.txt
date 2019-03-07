@@ -164,6 +164,8 @@ endif()
 # Tests and examples
 #
 
+add_definitions (-DBOOST_BEAST_NO_MULTI_BUFFER)
+
 include_directories (.)
 
 if (OPENSSL_FOUND)

@@ -15,7 +15,6 @@
 #include <boost/beast/core/buffers_prefix.hpp>
 #include <boost/beast/core/buffers_to_string.hpp>
 #include <boost/beast/core/ostream.hpp>
-#include <boost/beast/core/multi_buffer.hpp>
 #include <boost/beast/websocket/stream.hpp>
 #include <boost/beast/_experimental/test/stream.hpp>
 #include <boost/beast/test/yield_to.hpp>

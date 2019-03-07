@@ -10,6 +10,10 @@
 #ifndef BOOST_BEAST_HTTP_DYNAMIC_BODY_HPP
 #define BOOST_BEAST_HTTP_DYNAMIC_BODY_HPP
 
+#include <boost/beast/core/detail/config.hpp>
+
+#ifndef BOOST_BEAST_NO_MULTI_BUFFER
+
 #include <boost/beast/core/multi_buffer.hpp>
 #include <boost/beast/http/basic_dynamic_body.hpp>
 
@@ -26,5 +30,7 @@ using dynamic_body = basic_dynamic_body<multi_buffer>;
 } // http
 } // beast
 } // boost
+
+#endif
 
 #endif

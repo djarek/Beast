@@ -13,7 +13,6 @@
 #include <boost/beast/core/detail/config.hpp>
 #include <boost/beast/core/buffers_cat.hpp>
 #include <boost/beast/core/buffers_suffix.hpp>
-#include <boost/beast/core/multi_buffer.hpp>
 #include <boost/beast/http/message.hpp>
 #include <boost/beast/http/serializer.hpp>
 #include <boost/beast/http/type_traits.hpp>

@@ -74,7 +74,7 @@ snippets()
     //[code_websocket_4_3
 
         // This DynamicBuffer will hold the received message
-        multi_buffer buffer;
+        flat_buffer buffer;
 
         // Read the next message in pieces
         do
@@ -91,7 +91,7 @@ snippets()
         ws.binary(ws.got_binary());
 
         // This buffer adaptor allows us to iterate through buffer in pieces
-        buffers_suffix<multi_buffer::const_buffers_type> cb{buffer.data()};
+        buffers_suffix<flat_buffer::const_buffers_type> cb{buffer.data()};
 
         // Echo the received message in pieces.
         // This will cause the message to be broken up into multiple frames.

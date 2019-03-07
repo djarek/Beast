@@ -11,6 +11,9 @@
 #define BOOST_BEAST_MULTI_BUFFER_HPP
 
 #include <boost/beast/core/detail/config.hpp>
+
+#ifndef BOOST_BEAST_NO_MULTI_BUFFER
+
 #include <boost/beast/core/detail/allocator.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/core/empty_value.hpp>
@@ -609,5 +612,7 @@ using multi_buffer = basic_multi_buffer<std::allocator<char>>;
 } // boost
 
 #include <boost/beast/core/impl/multi_buffer.hpp>
+
+#endif
 
 #endif

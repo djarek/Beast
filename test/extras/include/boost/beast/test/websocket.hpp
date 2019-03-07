@@ -10,7 +10,7 @@
 #ifndef BOOST_BEAST_TEST_WEBSOCKET_HPP
 #define BOOST_BEAST_TEST_WEBSOCKET_HPP
 
-#include <boost/beast/core/multi_buffer.hpp>
+#include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/websocket/stream.hpp>
 #include <boost/beast/_experimental/test/stream.hpp>
 #include <boost/asio/executor_work_guard.hpp>
@@ -32,7 +32,7 @@ class ws_echo_server
     net::io_context ioc_;
     net::executor_work_guard<
         net::io_context::executor_type> work_;
-    multi_buffer buffer_;
+    flat_buffer buffer_;
     test::stream ts_;
     std::thread t_;
     websocket::stream<test::stream&> ws_;

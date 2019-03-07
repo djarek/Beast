@@ -17,7 +17,6 @@
 #include <boost/beast/core/buffers_to_string.hpp>
 #include <boost/beast/core/ostream.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
-#include <boost/beast/core/multi_buffer.hpp>
 #include <boost/beast/_experimental/unit_test/suite.hpp>
 #include <chrono>
 #include <iostream>
@@ -30,9 +29,10 @@ namespace http {
 class parser_test : public beast::unit_test::suite
 {
 public:
+    using body_type = basic_dynamic_body<flat_buffer>;
+
     static std::size_t constexpr N = 2000;
 
-    //using corpus = std::vector<multi_buffer>;
     using corpus = std::vector<flat_buffer>;
 
     corpus creq_;
@@ -296,38 +296,32 @@ public:
             ((Repeat * size_ + 512) / 1024) << "KB in " <<
                 (Repeat * (creq_.size() + cres_.size())) << " messages";
 
-#if 0
         timedTest(Trials, "http::parser",
             [&]
             {
-                testParser2<request_parser<dynamic_body>>(Repeat, creq_);
-                testParser2<response_parser<dynamic_body>>(Repeat, cres_);
+                testParser2<request_parser<body_type>>(Repeat, creq_);
+                testParser2<response_parser<body_type>>(Repeat, cres_);
             });
-#endif
-#if 1
         timedTest(Trials, "http::basic_parser",
             [&]
             {
                 testParser2<bench_parser<
-                    true, dynamic_body, fields> >(
+                    true, body_type, fields> >(
                         Repeat, creq_);
                 testParser2<bench_parser<
-                    false, dynamic_body, fields>>(
+                    false, body_type, fields>>(
                         Repeat, cres_);
             });
-#if 1
         timedTest(Trials, "nodejs_parser",
             [&]
             {
                 testParser1<nodejs_parser<
-                    true, dynamic_body, fields>>(
+                    true, body_type, fields>>(
                         Repeat, creq_);
                 testParser1<nodejs_parser<
-                    false, dynamic_body, fields>>(
+                    false, body_type, fields>>(
                         Repeat, cres_);
             });
-#endif
-#endif
         pass();
     }
 

@@ -59,7 +59,7 @@ public:
     {
         test::stream ts{ioc_, sv};
         message<isRequest, string_body, fields> m;
-        multi_buffer b;
+        flat_buffer b;
         ts.close_remote();
         try
         {

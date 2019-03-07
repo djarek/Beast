@@ -10,6 +10,8 @@
 // Test that header file is self-contained.
 #include <boost/beast/core/multi_buffer.hpp>
 
+#ifndef BOOST_BEAST_NO_MULTI_BUFFER
+
 #include "test_buffer.hpp"
 
 #include <boost/beast/core/buffer_traits.hpp>
@@ -830,3 +832,5 @@ BEAST_DEFINE_TESTSUITE(beast,core,multi_buffer);
 
 } // beast
 } // boost
+
+#endif

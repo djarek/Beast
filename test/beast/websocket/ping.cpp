@@ -11,7 +11,7 @@
 #include <boost/beast/websocket/stream.hpp>
 
 #include "test.hpp"
-
+#include <boost/beast/core/flat_buffer.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/strand.hpp>
 
@@ -174,7 +174,7 @@ public:
             ws.next_layer().append(string_view{
                 "\x89\x00" "\x81\x01*", 5});
             std::size_t count = 0;
-            multi_buffer b;
+            flat_buffer b;
             ws.async_read(b,
                 [&](error_code ec, std::size_t)
                 {
@@ -216,7 +216,7 @@ public:
                 "\x09\x00", 2});
 
             std::size_t count = 0;
-            multi_buffer b;
+            flat_buffer b;
             ws.async_read(b,
                 [&](error_code ec, std::size_t)
                 {
@@ -257,7 +257,7 @@ public:
             ws.next_layer().append(string_view{
                 "\x88\x00", 2});
             std::size_t count = 0;
-            multi_buffer b;
+            flat_buffer b;
             ws.async_read(b,
                 [&](error_code ec, std::size_t)
                 {
@@ -297,7 +297,7 @@ public:
             // Cause close to be received
             es.async_close();
             std::size_t count = 0;
-            multi_buffer b;
+            flat_buffer b;
             ws.async_read(b,
                 [&](error_code ec, std::size_t)
                 {
@@ -376,7 +376,7 @@ public:
             // Cause close to be received
             es.async_close();
             
-            multi_buffer b;
+            flat_buffer b;
             std::size_t count = 0;
             // Read a close frame.
             // Sends a close frame, blocking writes.

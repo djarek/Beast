@@ -14,8 +14,11 @@
 
 #include <boost/beast/core/ostream.hpp>
 #include <boost/beast/core/flat_static_buffer.hpp>
-#include <boost/beast/http/fields.hpp>
+#include <boost/beast/core/flat_buffer.hpp>
+#include <boost/beast/core/multi_buffer.hpp>
+#include <boost/beast/http/basic_dynamic_body.hpp>
 #include <boost/beast/http/dynamic_body.hpp>
+#include <boost/beast/http/fields.hpp>
 #include <boost/beast/http/parser.hpp>
 #include <boost/beast/http/string_body.hpp>
 #include <boost/beast/_experimental/test/stream.hpp>
@@ -35,6 +38,14 @@ class read_test
     , public test::enable_yield_to
 {
 public:
+#ifndef BOOST_BEAST_NO_MULTI_BUFFER
+    using storage_type = multi_buffer;
+    using dynamic_body_type = dynamic_body;
+#else
+    using storage_type = flat_buffer;
+    using dynamic_body_type = basic_dynamic_body<flat_buffer>;
+#endif
+
     template<bool isRequest>
     void
     failMatrix(char const* s, yield_context do_yield)
@@ -44,7 +55,7 @@ public:
         auto const len = strlen(s);
         for(n = 0; n < limit; ++n)
         {
-            multi_buffer b;
+            storage_type b;
             b.commit(net::buffer_copy(
                 b.prepare(len), net::buffer(s, len)));
             test::fail_count fc(n);
@@ -60,7 +71,7 @@ public:
         for(n = 0; n < limit; ++n)
         {
             static std::size_t constexpr pre = 10;
-            multi_buffer b;
+            storage_type b;
             b.commit(net::buffer_copy(
                 b.prepare(pre), net::buffer(s, pre)));
             test::fail_count fc(n);
@@ -76,7 +87,7 @@ public:
         BEAST_EXPECT(n < limit);
         for(n = 0; n < limit; ++n)
         {
-            multi_buffer b;
+            storage_type b;
             b.commit(net::buffer_copy(
                 b.prepare(len), net::buffer(s, len)));
             test::fail_count fc(n);
@@ -91,7 +102,7 @@ public:
         BEAST_EXPECT(n < limit);
         for(n = 0; n < limit; ++n)
         {
-            multi_buffer b;
+            storage_type b;
             b.commit(net::buffer_copy(
                 b.prepare(len), net::buffer(s, len)));
             test::fail_count fc(n);
@@ -107,7 +118,7 @@ public:
         for(n = 0; n < limit; ++n)
         {
             static std::size_t constexpr pre = 10;
-            multi_buffer b;
+            storage_type b;
             b.commit(net::buffer_copy(
                 b.prepare(pre), net::buffer(s, pre)));
             test::fail_count fc(n);
@@ -127,10 +138,10 @@ public:
     {
         try
         {
-            multi_buffer b;
+            storage_type b;
             test::stream c{ioc_, "GET / X"};
             c.close_remote();
-            request_parser<dynamic_body> p;
+            request_parser<dynamic_body_type> p;
             read(c, b, p);
             fail();
         }
@@ -261,10 +272,10 @@ public:
                 "Content-Length: 0\r\n"
                 "\r\n"
             };
-            request<dynamic_body> m;
+            request<dynamic_body_type> m;
             try
             {
-                multi_buffer b;
+                storage_type b;
                 read(c, b, m);
                 break;
             }
@@ -284,9 +295,9 @@ public:
                 "Content-Length: 0\r\n"
                 "\r\n"
             };
-            request<dynamic_body> m;
+            request<dynamic_body_type> m;
             error_code ec = test::error::test_failure;
-            multi_buffer b;
+            storage_type b;
             read(ts, b, m, ec);
             if(! ec)
                 break;
@@ -303,9 +314,9 @@ public:
                 "Content-Length: 0\r\n"
                 "\r\n"
             };
-            request<dynamic_body> m;
+            request<dynamic_body_type> m;
             error_code ec = test::error::test_failure;
-            multi_buffer b;
+            storage_type b;
             async_read(c, b, m, do_yield[ec]);
             if(! ec)
                 break;
@@ -322,9 +333,9 @@ public:
                 "Content-Length: 0\r\n"
                 "\r\n"
             };
-            request_parser<dynamic_body> m;
+            request_parser<dynamic_body_type> m;
             error_code ec = test::error::test_failure;
-            multi_buffer b;
+            storage_type b;
             async_read_some(c, b, m, do_yield[ec]);
             if(! ec)
                 break;
@@ -336,18 +347,18 @@ public:
     testEof(yield_context do_yield)
     {
         {
-            multi_buffer b;
+            storage_type b;
             test::stream ts{ioc_};
-            request_parser<dynamic_body> p;
+            request_parser<dynamic_body_type> p;
             error_code ec;
             ts.close_remote();
             read(ts, b, p, ec);
             BEAST_EXPECT(ec == http::error::end_of_stream);
         }
         {
-            multi_buffer b;
+            storage_type b;
             test::stream ts{ioc_};
-            request_parser<dynamic_body> p;
+            request_parser<dynamic_body_type> p;
             error_code ec;
             ts.close_remote();
             async_read(ts, b, p, do_yield[ec]);
@@ -376,8 +387,8 @@ public:
             test::stream ts{ioc,
                 "GET / HTTP/1.1\r\n\r\n"};
             BEAST_EXPECT(handler::count() == 0);
-            multi_buffer b;
-            request<dynamic_body> m;
+            storage_type b;
+            request<dynamic_body_type> m;
             async_read(ts, b, m, handler{});
             BEAST_EXPECT(handler::count() > 0);
             ioc.stop();
@@ -395,8 +406,8 @@ public:
                 test::stream ts{ioc,
                     "GET / HTTP/1.1\r\n\r\n"};
                 BEAST_EXPECT(handler::count() == 0);
-                multi_buffer b;
-                request<dynamic_body> m;
+                storage_type b;
+                request<dynamic_body_type> m;
                 async_read(ts, b, m, handler{});
                 BEAST_EXPECT(handler::count() > 0);
             }
@@ -419,7 +430,7 @@ public:
           "0\r\n\r\n";
         error_code ec;
         flat_buffer fb;
-        response_parser<dynamic_body> p;
+        response_parser<dynamic_body_type> p;
         read(ts, fb, p, ec);
         BEAST_EXPECTS(! ec, ec.message());
     }
@@ -502,7 +513,7 @@ public:
             strand s{ioc.get_executor()};
             test::stream ts{ioc};
             flat_buffer b;
-            request_parser<dynamic_body> p;
+            request_parser<dynamic_body_type> p;
             async_read_some(ts, b, p,
                 net::bind_executor(
                     s, copyable_handler{}));
@@ -512,7 +523,7 @@ public:
             strand s{ioc.get_executor()};
             test::stream ts{ioc};
             flat_buffer b;
-            request_parser<dynamic_body> p;
+            request_parser<dynamic_body_type> p;
             async_read(ts, b, p,
                 net::bind_executor(
                     s, copyable_handler{}));
@@ -522,7 +533,7 @@ public:
             strand s{ioc.get_executor()};
             test::stream ts{ioc};
             flat_buffer b;
-            request<dynamic_body> m;
+            request<dynamic_body_type> m;
             async_read(ts, b, m,
                 net::bind_executor(
                     s, copyable_handler{}));

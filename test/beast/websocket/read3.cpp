@@ -12,6 +12,7 @@
 
 #include "test.hpp"
 
+#include <boost/beast/core/flat_buffer.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/strand.hpp>
@@ -46,7 +47,7 @@ public:
                 });
             while(! ws.impl_->rd_block.is_locked())
                 ioc.run_one();
-            multi_buffer b;
+            flat_buffer b;
             ws.async_read(b,
                 [&](error_code ec, std::size_t)
                 {
@@ -68,7 +69,7 @@ public:
             ws.next_layer().connect(es.stream());
             ws.handshake("localhost", "/");
             std::size_t count = 0;
-            multi_buffer b;
+            flat_buffer b;
             ws.async_read(b,
                 [&](error_code ec, std::size_t)
                 {
@@ -103,7 +104,7 @@ public:
                 "\x89\x00", 2));
             std::size_t count = 0;
             std::string const s = "Hello, world";
-            multi_buffer b;
+            flat_buffer b;
             ws.async_read(b,
                 [&](error_code ec, std::size_t)
                 {
@@ -143,7 +144,7 @@ public:
                 "\x01\x01*"
                 "\x89\x00"
                 "\x80\x01*", 8));
-            multi_buffer b;
+            flat_buffer b;
             ws.async_read(b,
                 [&](error_code ec, std::size_t)
                 {
@@ -191,7 +192,7 @@ public:
                 "\x01\x01*"
                 "\x88\x00"
                 "\x80\x01*", 8));
-            multi_buffer b;
+            flat_buffer b;
             ws.async_read(b,
                 [&](error_code ec, std::size_t)
                 {
@@ -228,7 +229,7 @@ public:
                 ws.handshake("localhost", "/");
                 ws.next_layer().append(s);
                 error_code ec;
-                multi_buffer b;
+                flat_buffer b;
                 ws.read(b, ec);
                 BEAST_EXPECT(ec);
             };
@@ -244,7 +245,7 @@ public:
                 "\x81\x7e\x01");
             std::size_t count = 0;
             std::string const s(257, '*');
-            multi_buffer b;
+            flat_buffer b;
             ws.async_read(b,
                 [&](error_code ec, std::size_t)
                 {
@@ -300,7 +301,7 @@ public:
             ws.next_layer().append(
                 "\x81\x01*");
             error_code ec;
-            multi_buffer b;
+            flat_buffer b;
             ws.read(b, ec);
             BEAST_EXPECT(ec);
         }
@@ -318,7 +319,7 @@ public:
             ws.next_layer().append(
                 "\x89\x02*");
             std::size_t count = 0;
-            multi_buffer b;
+            flat_buffer b;
             ws.async_read(b,
                 [&](error_code ec, std::size_t)
                 {
@@ -352,7 +353,7 @@ public:
             // too-big message frame indicates payload of 2^64-1
             net::write(ws.next_layer(), sbuf(
                 "\x81\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"));
-            multi_buffer b;
+            flat_buffer b;
             error_code ec;
             ws.read(b, ec);
             BEAST_EXPECT(ec == error::closed);
@@ -385,7 +386,7 @@ public:
     testIssue954()
     {
         echo_server es{log};
-        multi_buffer b;
+        flat_buffer b;
         net::io_context ioc;
         stream<test::stream> ws{ioc};
         ws.next_layer().connect(es.stream());
@@ -464,7 +465,7 @@ public:
             net::write(wsc.next_layer(), sbuf(
                 "\xc1\x81\x3a\xa1\x74\x3b\x49"));
             error_code ec;
-            multi_buffer b;
+            flat_buffer b;
             wss.read(b, ec);
             BEAST_EXPECTS(ec == zlib::error::end_of_stream, ec.message());
         }

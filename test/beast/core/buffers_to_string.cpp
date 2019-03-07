@@ -10,7 +10,7 @@
 // Test that header file is self-contained.
 #include <boost/beast/core/buffers_to_string.hpp>
 
-#include <boost/beast/core/multi_buffer.hpp>
+#include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/core/ostream.hpp>
 #include <boost/beast/_experimental/unit_test/suite.hpp>
 
@@ -23,7 +23,7 @@ public:
     void
     run() override
     {
-        multi_buffer b;
+        flat_buffer b;
         ostream(b) << "Hello, ";
         ostream(b) << "world!";
         BEAST_EXPECT(buffers_to_string(b.data()) == "Hello, world!");

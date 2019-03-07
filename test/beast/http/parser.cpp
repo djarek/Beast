@@ -364,7 +364,9 @@ public:
     {
         testParse();
         testNeedMore<flat_buffer>();
+    #ifndef BOOST_BEAST_NO_MULTI_BUFFER
         testNeedMore<multi_buffer>();
+    #endif
         testGotSome();
         testIssue818();
         testIssue1187();

@@ -10,10 +10,10 @@
 // Test that header file is self-contained.
 #include <boost/beast/websocket/stream.hpp>
 
+#include "test.hpp"
 #include <boost/beast/_experimental/test/stream.hpp>
 #include <boost/beast/_experimental/test/tcp.hpp>
-#include "test.hpp"
-
+#include <boost/beast/core/flat_buffer.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/strand.hpp>
 
@@ -358,7 +358,7 @@ public:
             ws.next_layer().append(string_view{
                 "\x89\x00" "\x81\x01*", 5});
             std::size_t count = 0;
-            multi_buffer b;
+            flat_buffer b;
             ws.async_read(b,
                 [&](error_code ec, std::size_t)
                 {
@@ -399,7 +399,7 @@ public:
             ws.next_layer().append(string_view{
                 "\x09\x00", 2});
             std::size_t count = 0;
-            multi_buffer b;
+            flat_buffer b;
             ws.async_read(b,
                 [&](error_code ec, std::size_t)
                 {
@@ -440,7 +440,7 @@ public:
             ws.next_layer().append(string_view{
                 "\x88\x00", 2});
             std::size_t count = 0;
-            multi_buffer b;
+            flat_buffer b;
             ws.async_read(b,
                 [&](error_code ec, std::size_t)
                 {
@@ -491,7 +491,7 @@ public:
                     BEAST_EXPECT(n == s.size());
                     BEAST_EXPECT(++count == 1);
                 });
-            multi_buffer b;
+            flat_buffer b;
             ws.async_read(b,
                 [&](error_code ec, std::size_t)
                 {
@@ -525,7 +525,7 @@ public:
             ws.next_layer().append(string_view{
                 "\x89\x00", 2});
             std::size_t count = 0;
-            multi_buffer b;
+            flat_buffer b;
             std::string const s = "Hello, world!";
             ws.async_write(net::buffer(s),
                 [&](error_code ec, std::size_t n)
@@ -570,7 +570,7 @@ public:
             ws.handshake("localhost", "/");
             std::size_t count = 0;
             std::string const s = "Hello, world!";
-            multi_buffer b;
+            flat_buffer b;
             ws.async_close({},
                 [&](error_code ec)
                 {
@@ -618,7 +618,7 @@ public:
             ws.handshake("localhost", "/");
             std::size_t count = 0;
             std::string const s = "Hello, world!";
-            multi_buffer b;
+            flat_buffer b;
             ws.async_read(b,
                 [&](error_code ec, std::size_t)
                 {
@@ -679,7 +679,7 @@ public:
             ws.handshake("localhost", "/");
             std::size_t count = 0;
             std::string const s = "Hello, world!";
-            multi_buffer b;
+            flat_buffer b;
             ws.async_ping({},
                 [&](error_code ec)
                 {

@@ -842,10 +842,10 @@ do_form_request(
     do_dynamic_body:
     default:
     {
-        // Commit to dynamic_body as the body type.
+        // Commit to string_body as the body type.
         // As long as there are no body octets in the parser
         // we are constructing from, no exception is thrown.
-        request_parser<dynamic_body> req{std::move(req0)};
+        request_parser<string_body> req{std::move(req0)};
 
         // Finish reading the message
         read(stream, buffer, req);

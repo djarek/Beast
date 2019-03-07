@@ -13,7 +13,6 @@
 #include <boost/beast/core/buffers_to_string.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/core/flat_static_buffer.hpp>
-#include <boost/beast/core/multi_buffer.hpp>
 #include <boost/beast/core/string.hpp>
 #include <boost/beast/_experimental/unit_test/suite.hpp>
 #include <ostream>
