@@ -12,6 +12,7 @@
 
 #include <boost/beast/core/detail/config.hpp>
 #include <boost/beast/core/detail/buffer_traits.hpp>
+#include <boost/beast/core/detail/clamp.hpp>
 #include <boost/beast/core/detail/static_const.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/config/workaround.hpp>
@@ -156,6 +157,258 @@ std::size_t
 buffer_bytes(BufferSequence const& buffers);
 #else
 BOOST_BEAST_INLINE_VARIABLE(buffer_bytes, detail::buffer_bytes_impl)
+#endif
+
+#ifndef BOOST_BEAST_DOXYGEN
+namespace detail {
+struct dynamic_buffer_access;
+} // detail;
+#endif
+
+/** A DynamicBuffer adaptor for storage objects.
+*/
+template<class DynamicStorage>
+class dynamic_storage_buffer
+{
+    DynamicStorage& ds_;
+    std::size_t max_size_;
+
+    friend struct detail::dynamic_buffer_access;
+
+    explicit
+    dynamic_storage_buffer(
+        DynamicStorage& storage,
+        std::size_t max_size)
+        : ds_(storage)
+        , max_size_(max_size)
+    {
+    }
+
+public:
+    /// The ConstBufferSequence used to represent the readable bytes.
+    using const_buffers_type =
+        typename DynamicStorage::const_buffers_type;
+
+    /// The MutableBufferSequence used to represent the writable bytes.
+    using mutable_buffers_type =
+        typename DynamicStorage::mutable_buffers_type;
+
+    dynamic_storage_buffer(dynamic_storage_buffer const&) = default;
+
+    dynamic_storage_buffer*
+    operator->() noexcept
+    {
+        return this;
+    }
+
+    /// Returns the number of readable bytes.
+    std::size_t
+    size() const noexcept
+    {
+        return ds_.size();
+    }
+
+    /// Return the maximum number of bytes, both readable and writable, that can ever be held.
+    std::size_t
+    max_size() const noexcept
+    {
+        return std::min<std::size_t>(
+            max_size_, ds_.max_size());
+    }
+
+    /// Return the maximum number of bytes, both readable and writable, that can be held without requiring an allocation.
+    std::size_t
+    capacity() const noexcept
+    {
+        return ds_.capacity();
+    }
+
+#ifndef BOOST_ASIO_NO_DYNAMIC_BUFFER_V1
+
+    /// Returns a constant buffer sequence representing the readable bytes
+    const_buffers_type
+    data() const noexcept
+    {
+        return ds_.data();
+    }
+
+    /// Returns a mutable buffer sequence representing the readable bytes
+    mutable_buffers_type
+    data() noexcept
+    {
+        return ds_.data();
+    }
+
+    /** Returns a mutable buffer sequence representing writable bytes.
+    
+        Returns a mutable buffer sequence representing the writable
+        bytes containing exactly `n` bytes of storage. Memory may be
+        reallocated as needed.
+
+        All buffers sequences previously obtained using
+        @ref data or @ref prepare become invalid.
+
+        @param n The desired number of bytes in the returned buffer
+        sequence.
+
+        @throws std::length_error if `size() + n` exceeds either
+        `max_size()` or the allocator's maximum allocation size.
+
+        @esafe
+
+        Strong guarantee.
+    */
+    mutable_buffers_type
+    prepare(std::size_t n)
+    {
+        if(detail::sum_exceeds(
+            ds_.size(), n,
+            std::min<std::size_t>(
+                ds_.max_size(),
+                max_size_)))
+            BOOST_THROW_EXCEPTION(std::length_error(
+                "dynamic buffer overflow"));
+        return ds_.prepare(n);
+    }
+
+    /** Append writable bytes to the readable bytes.
+
+        Appends n bytes from the start of the writable bytes to the
+        end of the readable bytes. The remainder of the writable bytes
+        are discarded. If n is greater than the number of writable
+        bytes, all writable bytes are appended to the readable bytes.
+
+        All buffers sequences previously obtained using
+        @ref data or @ref prepare become invalid.
+
+        @param n The number of bytes to append. If this number
+        is greater than the number of writable bytes, all
+        writable bytes are appended.
+
+        @esafe
+
+        No-throw guarantee.
+    */
+    void
+    commit(std::size_t n) noexcept
+    {
+        ds_.commit(n);
+    }
+
+#endif
+
+    /** Return a constant buffer sequence representing the underlying memory.
+
+        The returned buffer sequence `u` represents the underlying
+        memory beginning at offset `pos` and where `buffer_size(u) <= n`.
+
+        @param pos The offset to start from. If this is larger than
+        the size of the underlying memory, an empty buffer sequence
+        is returned.
+
+        @param n The maximum number of bytes in the returned sequence,
+        starting from `pos`.
+
+        @return The constant buffer sequence
+    */
+    const_buffers_type
+    data(std::size_t pos, std::size_t n) const noexcept
+    {
+        return ds_.data(pos, n);
+    }
+
+    /** Return a mutable buffer sequence representing the underlying memory.
+
+        The returned buffer sequence `u` represents the underlying
+        memory beginning at offset `pos` and where `buffer_size(u) <= n`.
+
+        @param pos The offset to start from. If this is larger than
+        the size of the underlying memory, an empty buffer sequence
+        is returned.
+
+        @param n The maximum number of bytes in the returned sequence,
+        starting from `pos`.
+
+        @return The mutable buffer sequence
+    */
+    mutable_buffers_type
+    data(std::size_t pos, std::size_t n) noexcept
+    {
+        return ds_.data(pos, n);
+    }
+
+    /** Extend the underlying memory to accommodate additional bytes.
+
+        @param n The number of additional bytes to extend by.
+
+        @throws `length_error` if `size() + n > max_size()`.
+    */
+    void
+    grow(std::size_t n)
+    {
+        if(detail::sum_exceeds(
+            ds_.size(), n,
+            std::min<std::size_t>(
+                ds_.max_size(),
+                max_size_)))
+            BOOST_THROW_EXCEPTION(std::length_error(
+                "dynamic buffer overflow"));
+        ds_.grow(n);
+    }
+
+    /** Remove bytes from the end of the underlying memory.
+
+        This removes bytes from the end of the underlying memory. If
+        the number of bytes to remove is larger than `size()`, then
+        all underlying memory is emptied.
+
+        @param n The number of bytes to remove.
+    */
+    void
+    shrink(std::size_t n)
+    {
+        ds_.shrink(n);
+    }
+
+    /** Remove bytes from beginning of the readable bytes.
+
+        Removes n bytes from the beginning of the readable bytes.
+
+        All buffers sequences previously obtained using
+        @ref data or @ref prepare become invalid.
+
+        @param n The number of bytes to remove. If this number
+        is greater than the number of readable bytes, all
+        readable bytes are removed.
+
+        @esafe
+
+        No-throw guarantee.
+    */
+    void
+    consume(std::size_t n) noexcept
+    {
+        ds_.consume(n);
+    }
+};
+
+#ifndef  BOOST_BEAST_DOXYGEN
+namespace detail {
+struct dynamic_buffer_access
+{
+    template<class DynamicStorage>
+    static
+    dynamic_storage_buffer<DynamicStorage>
+    make_dynamic_buffer(
+        DynamicStorage& storage,
+        std::size_t max_size =
+        (std::numeric_limits<std::size_t>::max)())
+    {
+        return dynamic_storage_buffer<
+            DynamicStorage>(storage, max_size);
+    }
+};
+} // detail
 #endif
 
 } // beast

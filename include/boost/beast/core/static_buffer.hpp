@@ -11,6 +11,7 @@
 #define BOOST_BEAST_STATIC_BUFFER_HPP
 
 #include <boost/beast/core/detail/config.hpp>
+#include <boost/beast/core/buffer_traits.hpp>
 #include <boost/beast/core/detail/buffers_pair.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/assert.hpp>
@@ -54,6 +55,9 @@ namespace beast {
     @see static_buffer
 */
 class static_buffer_base
+#ifndef BOOST_BEAST_DOXYGEN
+    : private detail::dynamic_buffer_access
+#endif
 {
     char* begin_;
     std::size_t in_off_ = 0;
@@ -61,7 +65,10 @@ class static_buffer_base
     std::size_t out_size_ = 0;
     std::size_t capacity_;
 
+    friend class dynamic_storage_buffer<static_buffer_base>;
+
     static_buffer_base(static_buffer_base const& other) = delete;
+
     static_buffer_base& operator=(static_buffer_base const&) = delete;
 
 public:
@@ -91,6 +98,24 @@ public:
     BOOST_BEAST_DECL
     void
     clear() noexcept;
+
+    dynamic_storage_buffer<static_buffer_base>
+    dynamic_buffer() noexcept
+    {
+        return make_dynamic_buffer(*this);
+    }
+
+    dynamic_storage_buffer<static_buffer_base>
+    dynamic_buffer(std::size_t max_size) noexcept
+    {
+        return make_dynamic_buffer(*this, max_size);
+    }
+
+    dynamic_storage_buffer<static_buffer_base>
+    operator->() noexcept
+    {
+        return dynamic_buffer();
+    }
 
     //--------------------------------------------------------------------------
 

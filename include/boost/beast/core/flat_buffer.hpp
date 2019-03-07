@@ -11,6 +11,7 @@
 #define BOOST_BEAST_FLAT_BUFFER_HPP
 
 #include <boost/beast/core/detail/config.hpp>
+#include <boost/beast/core/buffer_traits.hpp>
 #include <boost/beast/core/detail/allocator.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/core/empty_value.hpp>
@@ -60,6 +61,7 @@ class basic_flat_buffer
     : private boost::empty_value<
         typename detail::allocator_traits<Allocator>::
             template rebind_alloc<char>>
+    , private detail::dynamic_buffer_access
 #endif
 {
     template<class OtherAlloc>
@@ -94,6 +96,8 @@ class basic_flat_buffer
     char* last_;
     char* end_;
     std::size_t max_;
+
+    friend class dynamic_storage_buffer<basic_flat_buffer>;
 
 public:
     /// The type of allocator used.
@@ -396,11 +400,40 @@ public:
     /// The ConstBufferSequence used to represent the readable bytes.
     using const_buffers_type = net::const_buffer;
 
-    /// The MutableBufferSequence used to represent the readable bytes.
-    using mutable_data_type = net::mutable_buffer;
-
     /// The MutableBufferSequence used to represent the writable bytes.
     using mutable_buffers_type = net::mutable_buffer;
+
+    mutable_buffers_type
+    buffer() noexcept
+    {
+        return {in_, dist(in_, out_)};
+    }
+
+    const_buffers_type
+    buffer() const noexcept
+    {
+        return {in_, dist(in_, out_)};
+    }
+
+    dynamic_storage_buffer<basic_flat_buffer>
+    dynamic_buffer() noexcept
+    {
+        return make_dynamic_buffer(*this);
+    }
+
+    dynamic_storage_buffer<basic_flat_buffer>
+    dynamic_buffer(std::size_t max_size) noexcept
+    {
+        return make_dynamic_buffer(*this, max_size);
+    }
+
+    dynamic_storage_buffer<basic_flat_buffer>
+    operator->() noexcept
+    {
+        return dynamic_buffer();
+    }
+
+    //--------------------------------------------------------------------------
 
     /// Returns the number of readable bytes.
     std::size_t
@@ -409,18 +442,18 @@ public:
         return dist(in_, out_);
     }
 
-    /// Return the maximum number of bytes, both readable and writable, that can ever be held.
-    std::size_t
-    max_size() const noexcept
-    {
-        return max_;
-    }
-
     /// Return the maximum number of bytes, both readable and writable, that can be held without requiring an allocation.
     std::size_t
     capacity() const noexcept
     {
         return dist(begin_, end_);
+    }
+
+    /// Return the maximum number of bytes, both readable and writable, that can ever be held.
+    std::size_t
+    max_size() const noexcept
+    {
+        return max_;
     }
 
 #ifndef BOOST_ASIO_NO_DYNAMIC_BUFFER_V1
@@ -438,6 +471,9 @@ public:
     {
         return data();
     }
+
+    /// The MutableBufferSequence used to represent the readable bytes.
+    using mutable_data_type = net::mutable_buffer;
 
     /// Returns a mutable buffer sequence representing the readable bytes
     mutable_data_type

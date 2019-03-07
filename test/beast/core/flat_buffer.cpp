@@ -27,15 +27,55 @@ class flat_buffer_test : public beast::unit_test::suite
 {
 public:
     BOOST_STATIC_ASSERT(
-        is_mutable_dynamic_buffer<flat_buffer>::value);
+        is_mutable_dynamic_storage<flat_buffer>::value);
 
     void
     testDynamicBuffer()
     {
-        flat_buffer b(30);
-        BEAST_EXPECT(b.max_size() == 30);
-        test_dynamic_buffer(b);
-        test_dynamic_buffer_v2(b);
+        {
+            flat_buffer b;
+
+    #ifndef BOOST_ASIO_NO_DYNAMIC_BUFFER_V1
+
+            BOOST_STATIC_ASSERT(
+                net::is_dynamic_buffer_v1<
+                    decltype(b.dynamic_buffer())>::value);
+
+            BOOST_STATIC_ASSERT(
+                net::is_dynamic_buffer_v1<
+                    decltype(b.dynamic_buffer(10))>::value);
+
+            BOOST_STATIC_ASSERT(
+                net::is_dynamic_buffer_v1<decltype(
+                    b.operator->())>::value);
+
+    #endif
+
+            BOOST_STATIC_ASSERT(
+                net::is_dynamic_buffer_v2<
+                    decltype(b.dynamic_buffer())>::value);
+
+            BOOST_STATIC_ASSERT(
+                net::is_dynamic_buffer_v2<
+                    decltype(b.dynamic_buffer(10))>::value);
+
+            BOOST_STATIC_ASSERT(
+                net::is_dynamic_buffer_v2<decltype(
+                    b.operator->())>::value);
+
+            b->grow(0);
+        }
+        {
+            flat_buffer b(30);
+            BEAST_EXPECT(b.max_size() == 30);
+            test_dynamic_storage_v1(b);
+            test_dynamic_storage_v2(b);
+        }
+        {
+            flat_buffer b;
+            test_dynamic_buffer_v1(b.dynamic_buffer(30));
+            test_dynamic_buffer_v2(b.dynamic_buffer(120));
+        }
     }
 
     void

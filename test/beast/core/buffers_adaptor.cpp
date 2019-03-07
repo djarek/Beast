@@ -28,7 +28,7 @@ class buffers_adaptor_test : public unit_test::suite
 {
 public:
     BOOST_STATIC_ASSERT(
-        is_mutable_dynamic_buffer<
+        is_mutable_dynamic_storage<
             buffers_adaptor<buffers_triple>>::value);
 
     void
@@ -37,7 +37,7 @@ public:
         char s[13];
         buffers_triple tb(s, sizeof(s));
         buffers_adaptor<buffers_triple> b(tb);
-        test_dynamic_buffer(b);
+        test_dynamic_storage_v1(b);
     }
 
     void

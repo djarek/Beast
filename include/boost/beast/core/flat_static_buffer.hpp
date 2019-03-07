@@ -11,6 +11,7 @@
 #define BOOST_BEAST_FLAT_STATIC_BUFFER_HPP
 
 #include <boost/beast/core/detail/config.hpp>
+#include <boost/beast/core/buffer_traits.hpp>
 #include <boost/asio/buffer.hpp>
 #include <algorithm>
 #include <cstddef>
@@ -49,6 +50,9 @@ namespace beast {
     @see flat_static_buffer
 */
 class flat_static_buffer_base
+#ifndef BOOST_BEAST_DOXYGEN
+    : private detail::dynamic_buffer_access
+#endif
 {
     char* begin_;
     char* in_;
@@ -56,8 +60,11 @@ class flat_static_buffer_base
     char* last_;
     char* end_;
 
+    friend class dynamic_storage_buffer<flat_static_buffer_base>;
+
     flat_static_buffer_base(
         flat_static_buffer_base const& other) = delete;
+
     flat_static_buffer_base& operator=(
         flat_static_buffer_base const&) = delete;
 
@@ -108,6 +115,24 @@ public:
             BOOST_BEAST_DEPRECATION_STRING);
     }
 #endif
+
+    dynamic_storage_buffer<flat_static_buffer_base>
+    dynamic_buffer() noexcept
+    {
+        return make_dynamic_buffer(*this);
+    }
+
+    dynamic_storage_buffer<flat_static_buffer_base>
+    dynamic_buffer(std::size_t max_size) noexcept
+    {
+        return make_dynamic_buffer(*this, max_size);
+    }
+
+    dynamic_storage_buffer<flat_static_buffer_base>
+    operator->() noexcept
+    {
+        return dynamic_buffer();
+    }
 
     //--------------------------------------------------------------------------
 

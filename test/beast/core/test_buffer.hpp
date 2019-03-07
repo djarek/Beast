@@ -228,18 +228,18 @@ test_buffer_sequence(
 
 //------------------------------------------------------------------------------
 
-/** Metafunction to determine if a type meets the requirements of MutableDynamicBuffer
+/** Metafunction to determine if a type meets the requirements of MutableDynamicStorage
 */
 /* @{ */
 // VFALCO This trait needs tests
 template<class T, class = void>
-struct is_mutable_dynamic_buffer
+struct is_mutable_dynamic_storage
     : std::false_type
 {
 };
 
 template<class T>
-struct is_mutable_dynamic_buffer<T, detail::void_t<decltype(
+struct is_mutable_dynamic_storage<T, detail::void_t<decltype(
     std::declval<typename T::const_buffers_type&>() =
         std::declval<T const&>().data(),
     std::declval<typename T::const_buffers_type&>() =
@@ -271,28 +271,28 @@ buffers_fill(
     }
 }
 
-template<class MutableDynamicBuffer>
+template<class MutableDynamicStorage>
 void
-test_mutable_dynamic_buffer(
-    MutableDynamicBuffer const&,
+test_mutable_dynamic_storage(
+    MutableDynamicStorage const&,
     std::false_type)
 {
 }
 
-template<class MutableDynamicBuffer>
+template<class MutableDynamicStorage>
 void
-test_mutable_dynamic_buffer(
-    MutableDynamicBuffer const& b0,
+test_mutable_dynamic_storage(
+    MutableDynamicStorage const& b0,
     std::true_type)
 {
     BOOST_STATIC_ASSERT(
         net::is_mutable_buffer_sequence<typename
-            MutableDynamicBuffer::mutable_data_type>::value);
+            MutableDynamicStorage::mutable_data_type>::value);
 
     BOOST_STATIC_ASSERT(
         std::is_convertible<
-            typename MutableDynamicBuffer::mutable_data_type,
-            typename MutableDynamicBuffer::const_buffers_type>::value);
+            typename MutableDynamicStorage::mutable_data_type,
+            typename MutableDynamicStorage::const_buffers_type>::value);
 
     string_view src = "Hello, world!";
     if(src.size() > b0.max_size())
@@ -300,7 +300,7 @@ test_mutable_dynamic_buffer(
 
     // modify readable bytes
     {
-        MutableDynamicBuffer b(b0);
+        MutableDynamicStorage b(b0);
         auto const mb = b.prepare(src.size());
         BEAST_EXPECT(buffer_bytes(mb) == src.size());
         buffers_fill(mb, '*');
@@ -324,13 +324,13 @@ test_mutable_dynamic_buffer(
 
     // mutable to const sequence conversion
     {
-        MutableDynamicBuffer b(b0);
+        MutableDynamicStorage b(b0);
         b.commit(net::buffer_copy(
             b.prepare(src.size()),
             net::const_buffer(src.data(), src.size())));
         auto mb = b.data();
         auto cb = static_cast<
-            MutableDynamicBuffer const&>(b).data();
+            MutableDynamicStorage const&>(b).data();
         auto cbc = b.cdata();
         BEAST_EXPECT(
             beast::buffers_to_string(b.data()) == src);
@@ -360,21 +360,21 @@ test_mutable_dynamic_buffer(
 
 /** Test an instance of a dynamic buffer or mutable dynamic buffer.
 */
-template<class DynamicBuffer>
+template<class DynamicStorage>
 void
-test_dynamic_buffer(
-    DynamicBuffer const& b0)
+test_dynamic_storage_v1(
+    DynamicStorage const& b0)
 {
     BOOST_STATIC_ASSERT(
-        net::is_dynamic_buffer<DynamicBuffer>::value);
+        net::is_dynamic_buffer<DynamicStorage>::value);
 
     BOOST_STATIC_ASSERT(
         net::is_const_buffer_sequence<typename
-            DynamicBuffer::const_buffers_type>::value);
+            DynamicStorage::const_buffers_type>::value);
 
     BOOST_STATIC_ASSERT(
         net::is_mutable_buffer_sequence<typename
-            DynamicBuffer::mutable_buffers_type>::value);
+            DynamicStorage::mutable_buffers_type>::value);
 
     BEAST_EXPECT(b0.size() == 0);
     BEAST_EXPECT(buffer_bytes(b0.data()) == 0);
@@ -383,14 +383,14 @@ test_dynamic_buffer(
     {
         string_view src = "Hello, world!";
 
-        DynamicBuffer b1(b0);
+        DynamicStorage b1(b0);
         auto const mb = b1.prepare(src.size());
         b1.commit(net::buffer_copy(mb,
             net::const_buffer(src.data(), src.size())));
 
         // copy constructor
         {
-            DynamicBuffer b2(b1);
+            DynamicStorage b2(b1);
             BEAST_EXPECT(b2.size() == b1.size());
             BEAST_EXPECT(
                 buffers_to_string(b1.data()) ==
@@ -399,8 +399,8 @@ test_dynamic_buffer(
 
         // move constructor
         {
-            DynamicBuffer b2(b1);
-            DynamicBuffer b3(std::move(b2));
+            DynamicStorage b2(b1);
+            DynamicStorage b3(std::move(b2));
             BEAST_EXPECT(b3.size() == b1.size());
             BEAST_EXPECT(
                 buffers_to_string(b3.data()) ==
@@ -409,7 +409,7 @@ test_dynamic_buffer(
 
         // copy assignment
         {
-            DynamicBuffer b2(b0);
+            DynamicStorage b2(b0);
             b2 = b1;
             BEAST_EXPECT(b2.size() == b1.size());
             BEAST_EXPECT(
@@ -426,8 +426,8 @@ test_dynamic_buffer(
 
         // move assignment
         {
-            DynamicBuffer b2(b1);
-            DynamicBuffer b3(b0);
+            DynamicStorage b2(b1);
+            DynamicStorage b3(b0);
             b3 = std::move(b2);
             BEAST_EXPECT(b3.size() == b1.size());
             BEAST_EXPECT(
@@ -444,8 +444,8 @@ test_dynamic_buffer(
 
         // swap
         {
-            DynamicBuffer b2(b1);
-            DynamicBuffer b3(b0);
+            DynamicStorage b2(b1);
+            DynamicStorage b3(b0);
             BEAST_EXPECT(b2.size() == b1.size());
             BEAST_EXPECT(b3.size() == b0.size());
             using std::swap;
@@ -460,7 +460,7 @@ test_dynamic_buffer(
 
     // n == 0
     {
-        DynamicBuffer b(b0);
+        DynamicStorage b(b0);
         b.commit(1);
         BEAST_EXPECT(b.size() == 0);
         BEAST_EXPECT(buffer_bytes(b.prepare(0)) == 0);
@@ -480,7 +480,7 @@ test_dynamic_buffer(
 
     // max_size
     {
-        DynamicBuffer b(b0);
+        DynamicStorage b(b0);
         if(BEAST_EXPECT(
             b.max_size() + 1 > b.max_size()))
         {
@@ -520,7 +520,7 @@ test_dynamic_buffer(
     // readable / writable buffer sequence tests
     {
         make_new_src();
-        DynamicBuffer b(b0);
+        DynamicStorage b(b0);
         auto const& bc(b);
         auto const mb = b.prepare(src.size());
         BEAST_EXPECT(buffer_bytes(mb) == src.size());
@@ -545,7 +545,7 @@ test_dynamic_buffer(
         {
             make_new_src();
 
-            DynamicBuffer b(b0);
+            DynamicStorage b(b0);
             auto const& bc(b);
             net::const_buffer cb(in.data(), in.size());
             while(cb.size() > 0)
@@ -571,46 +571,48 @@ test_dynamic_buffer(
         } } }
     }
 
-    // MutableDynamicBuffer refinement
-    detail::test_mutable_dynamic_buffer(b0,
-        is_mutable_dynamic_buffer<DynamicBuffer>{});
+    // MutableDynamicStorage refinement
+    detail::test_mutable_dynamic_storage(b0,
+        is_mutable_dynamic_storage<DynamicStorage>{});
 }
 
-template<class DynamicBuffer>
+template<class DynamicStorage>
 void
-test_dynamic_buffer_v2(
-    DynamicBuffer const& b0)
+test_dynamic_storage_v2(
+    DynamicStorage const& b0)
 {
-    DynamicBuffer b(b0);
+    // DynamicBuffer_v2 tests
+
+    DynamicStorage b(b0);
     auto const& b1 = b;
 
     b.grow(0);
     BEAST_EXPECT(b.size() == 0);
-    BEAST_EXPECT(buffer_size( b.data(0, 0)) == 0);
-    BEAST_EXPECT(buffer_size( b.data(1, 0)) == 0);
-    BEAST_EXPECT(buffer_size( b.data(1, 1)) == 0);
-    BEAST_EXPECT(buffer_size(b1.data(0, 0)) == 0);
-    BEAST_EXPECT(buffer_size(b1.data(1, 0)) == 0);
-    BEAST_EXPECT(buffer_size(b1.data(1, 1)) == 0);
+    BEAST_EXPECT(buffer_bytes( b.data(0, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes( b.data(1, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes( b.data(1, 1)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(0, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(1, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(1, 1)) == 0);
 
     b.grow(10);
     BEAST_EXPECT(b.size() == 10);
-    BEAST_EXPECT(buffer_size( b.data(0, 0)) == 0);
-    BEAST_EXPECT(buffer_size( b.data(1, 0)) == 0);
-    BEAST_EXPECT(buffer_size( b.data(1, 1)) == 1);
-    BEAST_EXPECT(buffer_size( b.data(0, 10)) == 10);
-    BEAST_EXPECT(buffer_size( b.data(0, 20)) == 10);
-    BEAST_EXPECT(buffer_size( b.data(1, 20)) == 9);
-    BEAST_EXPECT(buffer_size( b.data(10, 0)) == 0);
-    BEAST_EXPECT(buffer_size( b.data(10, 10)) == 0);
-    BEAST_EXPECT(buffer_size(b1.data(0, 0)) == 0);
-    BEAST_EXPECT(buffer_size(b1.data(1, 0)) == 0);
-    BEAST_EXPECT(buffer_size(b1.data(1, 1)) == 1);
-    BEAST_EXPECT(buffer_size(b1.data(0, 10)) == 10);
-    BEAST_EXPECT(buffer_size(b1.data(0, 20)) == 10);
-    BEAST_EXPECT(buffer_size(b1.data(1, 20)) == 9);
-    BEAST_EXPECT(buffer_size(b1.data(10, 0)) == 0);
-    BEAST_EXPECT(buffer_size(b1.data(10, 10)) == 0);
+    BEAST_EXPECT(buffer_bytes( b.data(0, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes( b.data(1, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes( b.data(1, 1)) == 1);
+    BEAST_EXPECT(buffer_bytes( b.data(0, 10)) == 10);
+    BEAST_EXPECT(buffer_bytes( b.data(0, 20)) == 10);
+    BEAST_EXPECT(buffer_bytes( b.data(1, 20)) == 9);
+    BEAST_EXPECT(buffer_bytes( b.data(10, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes( b.data(10, 10)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(0, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(1, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(1, 1)) == 1);
+    BEAST_EXPECT(buffer_bytes(b1.data(0, 10)) == 10);
+    BEAST_EXPECT(buffer_bytes(b1.data(0, 20)) == 10);
+    BEAST_EXPECT(buffer_bytes(b1.data(1, 20)) == 9);
+    BEAST_EXPECT(buffer_bytes(b1.data(10, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(10, 10)) == 0);
 
     b.shrink(1);
     BEAST_EXPECT(b.size() == 9);
@@ -620,6 +622,222 @@ test_dynamic_buffer_v2(
     BEAST_EXPECT(b.size() == 4);
     b.consume(50);
     BEAST_EXPECT(b.size() == 0);
+}
+
+//------------------------------------------------------------------------------
+
+template<class DynamicBuffer>
+void
+test_dynamic_buffer_v1(
+    DynamicBuffer b)
+{
+    BOOST_STATIC_ASSERT(
+        net::is_dynamic_buffer_v1<DynamicBuffer>::value);
+
+    BOOST_STATIC_ASSERT(
+        net::is_const_buffer_sequence<typename
+            DynamicBuffer::const_buffers_type>::value);
+
+    BOOST_STATIC_ASSERT(
+        net::is_mutable_buffer_sequence<typename
+            DynamicBuffer::mutable_buffers_type>::value);
+
+    BEAST_EXPECT(b.size() == 0);
+    BEAST_EXPECT(buffer_bytes(b.data()) == 0);
+
+    // copy constructor
+    {
+        DynamicBuffer b2(b);
+        BEAST_EXPECT(b2.size() == b.size());
+        BEAST_EXPECT(
+            buffers_to_string(b.data()) ==
+            buffers_to_string(b2.data()));
+        b.consume(b.size());
+    }
+
+    // n == 0
+    {
+        b.commit(1);
+        BEAST_EXPECT(b.size() == 0);
+        BEAST_EXPECT(buffer_bytes(b.prepare(0)) == 0);
+        b.commit(0);
+        BEAST_EXPECT(b.size() == 0);
+        b.commit(1);
+        BEAST_EXPECT(b.size() == 0);
+        b.commit(b.max_size() + 1);
+        BEAST_EXPECT(b.size() == 0);
+        b.consume(0);
+        BEAST_EXPECT(b.size() == 0);
+        b.consume(1);
+        BEAST_EXPECT(b.size() == 0);
+        b.consume(b.max_size() + 1);
+        BEAST_EXPECT(b.size() == 0);
+        b.consume(b.size());
+    }
+
+    // max_size
+    {
+        if(BEAST_EXPECT(
+            b.max_size() + 1 > b.max_size()))
+        {
+            try
+            {
+                b.prepare(b.max_size() + 1);
+                BEAST_FAIL();
+            }
+            catch(std::length_error const&)
+            {
+                BEAST_PASS();
+            }
+            catch(...)
+            {
+                BEAST_FAIL();
+            }
+        }
+        b.consume(b.size());
+    }
+
+    // setup source buffer
+    char buf[13];
+    unsigned char k0 = 0;
+    string_view src(buf, sizeof(buf));
+    if(src.size() > b.max_size())
+        src = {src.data(), b.max_size()};
+    BEAST_EXPECT(b.max_size() >= src.size());
+    BEAST_EXPECT(b.size() == 0);
+    BEAST_EXPECT(buffer_bytes(b.data()) == 0);
+    auto const make_new_src =
+        [&buf, &k0, &src]
+        {
+            auto k = k0++;
+            for(std::size_t i = 0; i < src.size(); ++i)
+                buf[i] = k++;
+        };
+
+    // readable / writable buffer sequence tests
+    {
+        make_new_src();
+        auto const& bc(b);
+        auto const mb = b.prepare(src.size());
+        BEAST_EXPECT(buffer_bytes(mb) == src.size());
+        beast::test_buffer_sequence(mb);
+        b.commit(net::buffer_copy(mb,
+            net::const_buffer(src.data(), src.size())));
+        BEAST_EXPECT(
+            buffer_bytes(bc.data()) == src.size());
+        beast::test_buffer_sequence(bc.data());
+        b.consume(b.size());
+    }
+
+    // h = in size
+    // i = prepare size
+    // j = commit size
+    // k = consume size
+    for(std::size_t h = 1; h <= src.size(); ++h)
+    {
+        string_view in(src.data(), h);
+        for(std::size_t i = 1; i <= in.size(); ++i) {
+        for(std::size_t j = 1; j <= i + 1; ++j) {
+        for(std::size_t k = 1; k <= in.size(); ++k) {
+        {
+            make_new_src();
+
+            auto const& bc(b);
+            net::const_buffer cb(in.data(), in.size());
+            while(cb.size() > 0)
+            {
+                auto const mb = b.prepare(
+                    std::min<std::size_t>(i,
+                        b.max_size() - b.size()));
+                auto const n = net::buffer_copy(mb,
+                    net::const_buffer(cb.data(),
+                        std::min<std::size_t>(j, cb.size())));
+                b.commit(n);
+                cb += n;
+            }
+            BEAST_EXPECT(b.size() == in.size());
+            BEAST_EXPECT(
+                buffer_bytes(bc.data()) == in.size());
+            BEAST_EXPECT(beast::buffers_to_string(
+                bc.data()) == in);
+            while(b.size() > 0)
+                b.consume(k);
+            BEAST_EXPECT(buffer_bytes(bc.data()) == 0);
+            b.consume(b.size());
+        }
+        } } }
+    }
+}
+
+template<class DynamicBuffer>
+void
+test_dynamic_buffer_v2(
+    DynamicBuffer b0)
+{
+    BOOST_STATIC_ASSERT(
+        net::is_dynamic_buffer_v2<DynamicBuffer>::value);
+
+    DynamicBuffer b(b0);
+    auto const& b1 = b;
+
+    b.grow(0);
+    BEAST_EXPECT(b.size() == 0);
+    BEAST_EXPECT(buffer_bytes( b.data(0, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes( b.data(1, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes( b.data(1, 1)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(0, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(1, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(1, 1)) == 0);
+
+    b.grow(10);
+    BEAST_EXPECT(b.size() == 10);
+    BEAST_EXPECT(buffer_bytes( b.data(0, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes( b.data(1, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes( b.data(1, 1)) == 1);
+    BEAST_EXPECT(buffer_bytes( b.data(0, 10)) == 10);
+    BEAST_EXPECT(buffer_bytes( b.data(0, 20)) == 10);
+    BEAST_EXPECT(buffer_bytes( b.data(1, 20)) == 9);
+    BEAST_EXPECT(buffer_bytes( b.data(10, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes( b.data(10, 10)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(0, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(1, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(1, 1)) == 1);
+    BEAST_EXPECT(buffer_bytes(b1.data(0, 10)) == 10);
+    BEAST_EXPECT(buffer_bytes(b1.data(0, 20)) == 10);
+    BEAST_EXPECT(buffer_bytes(b1.data(1, 20)) == 9);
+    BEAST_EXPECT(buffer_bytes(b1.data(10, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(10, 10)) == 0);
+
+    b.shrink(1);
+    BEAST_EXPECT(b.size() == 9);
+    b.shrink(2);
+    BEAST_EXPECT(b.size() == 7);
+    b.consume(3);
+    BEAST_EXPECT(b.size() == 4);
+    b.consume(50);
+    BEAST_EXPECT(b.size() == 0);
+
+    // max_size
+    {
+        if(BEAST_EXPECT(
+            b.max_size() + 1 > b.max_size()))
+        {
+            try
+            {
+                b.grow(b.max_size() + 1);
+                BEAST_FAIL();
+            }
+            catch(std::length_error const&)
+            {
+                BEAST_PASS();
+            }
+            catch(...)
+            {
+                BEAST_FAIL();
+            }
+        }
+        b.consume(b.size());
+    }
 }
 
 } // beast

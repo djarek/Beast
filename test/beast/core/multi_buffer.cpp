@@ -33,7 +33,7 @@ class multi_buffer_test : public beast::unit_test::suite
 {
 public:
     BOOST_STATIC_ASSERT(
-        is_mutable_dynamic_buffer<multi_buffer>::value);
+        is_mutable_dynamic_storage<multi_buffer>::value);
 
 #if ! BOOST_WORKAROUND(BOOST_LIBSTDCXX_VERSION, < 50000) && \
     ! BOOST_WORKAROUND(BOOST_MSVC, < 1910)
@@ -164,7 +164,7 @@ public:
     {
         multi_buffer b(30);
         BEAST_EXPECT(b.max_size() == 30);
-        test_dynamic_buffer(b);
+        test_dynamic_storage_v1(b);
     }
 
     void
