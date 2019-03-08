@@ -399,8 +399,6 @@ class dynamic_preparation
     std::size_t grow_by_ = 0;
 
 public:
-    dynamic_preparation() = default;
-
     template<class DynamicBuffer>
     static
     std::size_t
@@ -416,6 +414,16 @@ public:
             std::max<std::size_t>(
                 lower_limit,
                 buffer.capacity() - buffer.size()));
+    }
+
+    dynamic_preparation() = default;
+
+    template<class DynamicBuffer>
+    explicit
+    dynamic_preparation(
+        DynamicBuffer const& buffer) noexcept
+        : original_size_(buffer.size())
+    {
     }
 
     std::size_t

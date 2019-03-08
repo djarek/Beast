@@ -93,7 +93,7 @@ public:
         {
             char buf[64];
             static_buffer_base b{buf, sizeof(buf)};
-            ostream(b) << s;
+            ostream(b.dynamic_buffer()) << s;
             BEAST_EXPECT(buffers_to_string(b.data()) == s);
             b.clear();
             BEAST_EXPECT(b.size() == 0);
@@ -106,7 +106,7 @@ public:
             BEAST_EXPECT(b1.size() == 0);
             BEAST_EXPECT(b1.max_size() == 64);
             BEAST_EXPECT(b1.capacity() == 64);
-            ostream(b1) << s;
+            ostream(b1.dynamic_buffer()) << s;
             BEAST_EXPECT(buffers_to_string(b1.data()) == s);
             {
                 static_buffer<64> b2{b1};
@@ -126,9 +126,9 @@ public:
         // cause memmove
         {
             static_buffer<10> b;
-            ostream(b) << "12345";
+            ostream(b.dynamic_buffer()) << "12345";
             b.consume(3);
-            ostream(b) << "67890123";
+            ostream(b.dynamic_buffer()) << "67890123";
             BEAST_EXPECT(buffers_to_string(b.data()) == "4567890123");
             try
             {

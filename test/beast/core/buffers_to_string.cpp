@@ -24,8 +24,8 @@ public:
     run() override
     {
         flat_buffer b;
-        ostream(b) << "Hello, ";
-        ostream(b) << "world!";
+        ostream(b.dynamic_buffer()) << "Hello, ";
+        ostream(b.dynamic_buffer()) << "world!";
         BEAST_EXPECT(buffers_to_string(b.data()) == "Hello, world!");
     }
 };

@@ -32,14 +32,14 @@ public:
         // overflow
         {
             flat_static_buffer<16> b;
-            ostream(b) << s;
+            ostream(b.dynamic_buffer()) << s;
             BEAST_EXPECT(buffers_to_string(b.data()) == s);
         }
 
         // max_size
         {
             flat_static_buffer<16> b;
-            auto os = ostream(b);
+            auto os = ostream(b.dynamic_buffer());
             os << s;
             os << '*';
             BEAST_EXPECT(os.bad());
@@ -48,7 +48,7 @@ public:
         // max_size (exception
         {
             flat_static_buffer<16> b;
-            auto os = ostream(b);
+            auto os = ostream(b.dynamic_buffer());
             os.exceptions(os.badbit);
             os << s;
             try

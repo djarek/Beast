@@ -22,12 +22,12 @@
 namespace boost {
 namespace beast {
 
-/** A <em>Stream</em> with attached <em>DynamicBuffer</em> to buffer reads.
+/** A <em>Stream</em> with an internal buffer for reading.
 
     This wraps a <em>Stream</em> implementation so that calls to write are
     passed through to the underlying stream, while calls to read will
-    first consume the input sequence stored in a <em>DynamicBuffer</em> which
-    is part of the object.
+    first consume the input sequence stored in a an internal dynamic buffer
+    which is part of the object.
 
     The use-case for this class is different than that of the
     `net::buffered_read_stream`. It is designed to facilitate
