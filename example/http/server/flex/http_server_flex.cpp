@@ -523,7 +523,7 @@ public:
         // Detect a TLS handshake
         async_detect_ssl(
             stream_,
-            buffer_,
+            buffer_.dynamic_buffer(),
             beast::bind_front_handler(
                 &detect_session::on_detect,
                 shared_from_this()));

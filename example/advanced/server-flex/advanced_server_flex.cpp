@@ -821,9 +821,10 @@ public:
         // Set the timeout.
         stream_.expires_after(std::chrono::seconds(30));
 
+        // Detect a TLS handshake
         beast::async_detect_ssl(
             stream_,
-            buffer_,
+            buffer_.dynamic_buffer(),
             beast::bind_front_handler(
                 &detect_session::on_detect,
                 this->shared_from_this()));

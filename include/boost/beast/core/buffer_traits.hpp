@@ -17,6 +17,7 @@
 #include <boost/asio/buffer.hpp>
 #include <boost/config/workaround.hpp>
 #include <boost/mp11/function.hpp>
+#include <boost/assert.hpp>
 #include <type_traits>
 
 namespace boost {
@@ -167,17 +168,17 @@ struct dynamic_buffer_access;
 
 /** A DynamicBuffer adaptor for storage objects.
 */
-template<class DynamicStorage>
+template<class Storage>
 class dynamic_storage_buffer
 {
-    DynamicStorage& ds_;
+    Storage& ds_;
     std::size_t max_size_;
 
     friend struct detail::dynamic_buffer_access;
 
     explicit
     dynamic_storage_buffer(
-        DynamicStorage& storage,
+        Storage& storage,
         std::size_t max_size)
         : ds_(storage)
         , max_size_(max_size)
@@ -187,11 +188,11 @@ class dynamic_storage_buffer
 public:
     /// The ConstBufferSequence used to represent the readable bytes.
     using const_buffers_type =
-        typename DynamicStorage::const_buffers_type;
+        typename Storage::const_buffers_type;
 
     /// The MutableBufferSequence used to represent the writable bytes.
     using mutable_buffers_type =
-        typename DynamicStorage::mutable_buffers_type;
+        typename Storage::mutable_buffers_type;
 
     dynamic_storage_buffer(dynamic_storage_buffer const&) = default;
 
@@ -392,21 +393,95 @@ public:
     }
 };
 
+class dynamic_preparation
+{
+    std::size_t original_size_ = 0;
+    std::size_t grow_by_ = 0;
+
+public:
+    dynamic_preparation() = default;
+
+    template<class DynamicBuffer>
+    static
+    std::size_t
+    suggested_growth(
+        DynamicBuffer const& buffer,
+        std::size_t upper_limit = 1536,
+        std::size_t lower_limit = 512) noexcept
+    {
+        return std::min<std::size_t>(
+            std::min<std::size_t>(
+                upper_limit,
+                buffer.max_size() - buffer.size()),
+            std::max<std::size_t>(
+                lower_limit,
+                buffer.capacity() - buffer.size()));
+    }
+
+    std::size_t
+    size() const noexcept
+    {
+        return grow_by_;
+    }
+
+    template<class DynamicBuffer>
+    void
+    grow(
+        DynamicBuffer& buffer,
+        std::size_t upper_limit = 1536,
+        std::size_t lower_limit = 512)
+    {
+        original_size_ = buffer.size();
+        grow_by_ =  suggested_growth(
+            buffer, upper_limit, lower_limit);
+        buffer.grow(grow_by_);
+    }
+
+    template<class DynamicBuffer>
+    typename DynamicBuffer::mutable_buffers_type
+    data(DynamicBuffer& buffer) const
+    {
+        return buffer.data(original_size_, grow_by_);
+    }
+
+    template<class DynamicBuffer>
+    void
+    commit(
+        DynamicBuffer& buffer,
+        std::size_t bytes_transferred)
+    {
+        BOOST_ASSERT(bytes_transferred <= grow_by_);
+        buffer.shrink(grow_by_ - bytes_transferred);
+        original_size_ = buffer.size();
+        grow_by_ = 0;
+    }
+};
+
 #ifndef  BOOST_BEAST_DOXYGEN
 namespace detail {
 struct dynamic_buffer_access
 {
-    template<class DynamicStorage>
+    template<class Storage>
     static
-    dynamic_storage_buffer<DynamicStorage>
+    dynamic_storage_buffer<Storage>
     make_dynamic_buffer(
-        DynamicStorage& storage,
+        Storage& storage,
         std::size_t max_size =
         (std::numeric_limits<std::size_t>::max)())
     {
         return dynamic_storage_buffer<
-            DynamicStorage>(storage, max_size);
+            Storage>(storage, max_size);
     }
+};
+template<class T>
+struct is_dynamic_buffer_v2 : std::false_type
+{
+};
+template<class Storage>
+struct is_dynamic_buffer_v2<
+        dynamic_storage_buffer<Storage>>
+    : std::true_type
+{
 };
 } // detail
 #endif

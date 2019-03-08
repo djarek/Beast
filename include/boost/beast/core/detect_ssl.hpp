@@ -12,6 +12,7 @@
 
 #include <boost/beast/core/detail/config.hpp>
 #include <boost/beast/core/async_base.hpp>
+#include <boost/beast/core/buffer_traits.hpp>
 #include <boost/beast/core/error.hpp>
 #include <boost/beast/core/read_size.hpp>
 #include <boost/beast/core/stream_traits.hpp>
@@ -212,7 +213,7 @@ template<
 bool
 detect_ssl(
     SyncReadStream& stream,
-    DynamicBuffer& buffer,
+    DynamicBuffer buffer,
     error_code& ec)
 {
     namespace beast = boost::beast;
@@ -232,7 +233,8 @@ detect_ssl(
     {
         // There could already be data in the buffer
         // so we do this first, before reading from the stream.
-        auto const result = detail::is_tls_client_hello(buffer.data());
+        auto const result = detail::is_tls_client_hello(
+            buffer.data(0, buffer.size()));
 
         // If we got an answer, return it
         if(! boost::indeterminate(result))
@@ -242,17 +244,28 @@ detect_ssl(
             return static_cast<bool>(result);
         }
 
-        // Try to fill our buffer by reading from the stream.
-        // The function read_size calculates a reasonable size for the
-        // amount to read next, using existing capacity if possible to
-        // avoid allocating memory, up to the limit of 1536 bytes which
-        // is the size of a normal TCP frame.
+        // This helper is used to prepare a dynamic buffer for reading.
+        dynamic_preparation prep;
 
-        std::size_t const bytes_transferred = stream.read_some(
-            buffer.prepare(beast::read_size(buffer, 1536)), ec);
+        // Prepare the dynamic buffer for reading. We specify a hard upper
+        // limit of 1536 bytes (the size of a normal TCP frame). The helper
+        // prevents inefficient, tiny reads by applying a soft lower limit,
+        // defaulting to 512 bytes.
 
-        // Commit what we read into the buffer's input area.
-        buffer.commit(bytes_transferred);
+        prep.grow(buffer, 1536);
+
+        // If we couldn't grow the buffer then return an error
+        if(prep.size() == 0)
+        {
+            ec = error::buffer_limit;
+            return false;
+        }
+
+        // Read up to the limit of the amount we grew by
+        std::size_t const bytes_transferred = stream.read_some(prep.data(buffer), ec);
+
+        // Resize the buffer to fit what we actually read in
+        prep.commit(buffer, bytes_transferred);
 
         // Check for an error
         if(ec)
@@ -320,7 +333,7 @@ template<
 auto
 async_detect_ssl(
     AsyncReadStream& stream,
-    DynamicBuffer& buffer,
+    DynamicBuffer buffer,
     CompletionToken&& token)
         -> typename net::async_result<
             typename std::decay<CompletionToken>::type, /*< `async_result` customizes the return value based on the completion token >*/
@@ -367,13 +380,14 @@ struct run_detect_ssl_op
     void operator()(
         DetectHandler&& h,
         AsyncReadStream* s, // references are passed as pointers
-        DynamicBuffer& b)
+        DynamicBuffer b)
     {
         detect_ssl_op<
             typename std::decay<DetectHandler>::type,
             AsyncReadStream,
             DynamicBuffer>(
-                std::forward<DetectHandler>(h), *s, b);
+                std::forward<DetectHandler>(h),
+                *s, std::move(b));
     }
 };
 
@@ -391,7 +405,7 @@ template<
 auto
 async_detect_ssl(
     AsyncReadStream& stream,
-    DynamicBuffer& buffer,
+    DynamicBuffer buffer,
     CompletionToken&& token)
         -> typename net::async_result<
             typename std::decay<CompletionToken>::type,
@@ -421,7 +435,6 @@ async_detect_ssl(
     //
     // Non-const references need to be passed as pointers,
     // since we don't want a decay-copy.
-
 
     return net::async_initiate<
         CompletionToken,
@@ -476,7 +489,10 @@ class detect_ssl_op
     AsyncReadStream& stream_;
 
     // The callers buffer is used to hold all received data
-    DynamicBuffer& buffer_;
+    DynamicBuffer buffer_;
+
+    // This helper is used to prepare a dynamic buffer for reading.
+    dynamic_preparation prep_;
 
     // We're going to need this in case we have to post the handler
     error_code ec_;
@@ -495,14 +511,14 @@ public:
     detect_ssl_op(
         DetectHandler_&& handler,
         AsyncReadStream& stream,
-        DynamicBuffer& buffer)
+        DynamicBuffer buffer)
         : beast::async_base<
             DetectHandler_,
             beast::executor_type<AsyncReadStream>>(
                 std::forward<DetectHandler_>(handler),
                 stream.get_executor())
         , stream_(stream)
-        , buffer_(buffer)
+        , buffer_(std::move(buffer))
     {
         // This starts the operation. We pass `false` to tell the
         // algorithm that it needs to use net::post if it wants to
@@ -564,12 +580,21 @@ operator()(error_code ec, std::size_t bytes_transferred, bool cont)
             if(! boost::indeterminate(result_))
                 break;
 
+            // Prepare the dynamic buffer for reading. We specify a hard upper
+            // limit of 1536 bytes (the size of a normal TCP frame). The helper
+            // prevents inefficient, tiny reads by applying a soft lower limit,
+            // defaulting to 512 bytes.
+
+            prep_.grow(buffer_, 1536);
+
+            // If we couldn't grow the buffer then return an error
+            if(prep_.size() == 0)
+            {
+                ec = error::buffer_limit;
+                break;
+            }
+
             // Try to fill our buffer by reading from the stream.
-            // The function read_size calculates a reasonable size for the
-            // amount to read next, using existing capacity if possible to
-            // avoid allocating memory, up to the limit of 1536 bytes which
-            // is the size of a normal TCP frame.
-            //
             // `async_read_some` expects a ReadHandler as the completion
             // handler. The signature of a read handler is void(error_code, size_t),
             // and this function matches that signature (the `cont` parameter has
@@ -581,11 +606,10 @@ operator()(error_code ec, std::size_t bytes_transferred, bool cont)
             // by the move, are first moved to the stack before calling the
             // initiating function.
 
-            yield stream_.async_read_some(buffer_.prepare(
-                read_size(buffer_, 1536)), std::move(*this));
+            yield stream_.async_read_some(prep_.data(buffer_), std::move(*this));
 
-            // Commit what we read into the buffer's input area.
-            buffer_.commit(bytes_transferred);
+            // Resize the buffer to fit what we actually read in
+            prep_.commit(buffer_, bytes_transferred);
 
             // Check for an error
             if(ec)

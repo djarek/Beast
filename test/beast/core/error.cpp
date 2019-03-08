@@ -46,6 +46,7 @@ public:
     void run() override
     {
         check(condition::timeout, error::timeout);
+        check(error::buffer_limit);
     }
 };
 

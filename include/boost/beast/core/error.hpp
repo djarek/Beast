@@ -64,7 +64,15 @@ enum class error
 
         Error codes with this value will compare equal to @ref condition::timeout.
     */
-    timeout = 1
+    timeout = 1,
+
+    /** A dynamic buffer exceeded the locally configured limit.
+
+        This error indicates that the algorithm could not meet the
+        postcondition because it would exceed the maximum specified
+        size of a dynamic buffer.
+    */
+    buffer_limit
 };
 
 /// Error conditions corresponding to sets of library error codes.

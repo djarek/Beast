@@ -71,7 +71,7 @@ public:
             flat_buffer b;
             test::stream s1(ioc);
             s1.append({"\x16\x00\x00\x01\x00\x01\x00\x00\x00", 9});
-            auto result = detect_ssl(s1, b, ec);
+            auto result = detect_ssl(s1, b.dynamic_buffer(), ec);
             BEAST_EXPECT(result == true);
             BEAST_EXPECTS(! ec, ec.message());
         }
@@ -85,7 +85,7 @@ public:
             auto s2 = test::connect(s1);
             s1.append({"\x16\x00\x00\x01\x00\x01\x00\x00\x00", 9});
             s2.close();
-            auto result = detect_ssl(s1, b, ec);
+            auto result = detect_ssl(s1, b.dynamic_buffer(), ec);
             BEAST_EXPECT(result == true);
             BEAST_EXPECTS(! ec, ec.message());
         }
@@ -97,7 +97,7 @@ public:
             flat_buffer b;
             test::stream s1(ioc);
             s1.append({"\x16\x00\x00\x01\x00\x01\x01\x00\x00", 9});
-            auto result = detect_ssl(s1, b, ec);
+            auto result = detect_ssl(s1, b.dynamic_buffer(), ec);
             BEAST_EXPECT(result == false);
             BEAST_EXPECTS(! ec, ec.message());
         }
@@ -110,7 +110,7 @@ public:
             auto s2 = test::connect(s1);
             s1.append({"\x16\x00\x00\x01\x00", 5});
             s2.close();
-            auto result = detect_ssl(s1, b, ec);
+            auto result = detect_ssl(s1, b.dynamic_buffer(), ec);
             BEAST_EXPECT(result == false);
             BEAST_EXPECT(ec);
         }
@@ -127,7 +127,7 @@ public:
             flat_buffer b;
             test::stream s1(ioc);
             s1.append({"\x16\x00\x00\x01\x00\x01\x00\x00\x00", 9});
-            async_detect_ssl(s1, b, test::success_handler());
+            async_detect_ssl(s1, b.dynamic_buffer(), test::success_handler());
             test::run(ioc);
         }
 
@@ -139,7 +139,7 @@ public:
             auto s2 = test::connect(s1);
             s1.append({"\x16\x00\x00\x01\x00\x01\x00\x00\x00", 9});
             s2.close();
-            async_detect_ssl(s1, b, test::success_handler());
+            async_detect_ssl(s1, b.dynamic_buffer(), test::success_handler());
             test::run(ioc);
         }
 
@@ -149,7 +149,7 @@ public:
             flat_buffer b;
             test::stream s1(ioc);
             s1.append({"\x16\x00\x00\x01\x00\x01\x01\x00\x00", 9});
-            async_detect_ssl(s1, b, test::success_handler());
+            async_detect_ssl(s1, b.dynamic_buffer(), test::success_handler());
             test::run(ioc);
         }
 
@@ -160,7 +160,7 @@ public:
             auto s2 = test::connect(s1);
             s1.append({"\x16\x00\x00\x01\x00", 5});
             s2.close();
-            async_detect_ssl(s1, b,
+            async_detect_ssl(s1, b.dynamic_buffer(),
                 test::fail_handler(net::error::eof));
             test::run(ioc);
         }

@@ -35,6 +35,8 @@ public:
         default:
         case error::timeout: return
             "The socket was closed due to a timeout";
+        case error::buffer_limit: return
+            "A dynamic buffer would exceed a locally configured maximum size";
         }
     }
 
