@@ -63,6 +63,8 @@ public:
             test_parser<isRequest> p(fc);
             error_code ec = test::error::test_failure;
             ts.close_remote();
+            if (n == 99)
+                std::printf("\a");
             read(ts, b, p, ec);
             if(! ec)
                 break;
@@ -95,7 +97,7 @@ public:
             test_parser<isRequest> p(fc);
             error_code ec = test::error::test_failure;
             ts.close_remote();
-            async_read(ts, b, p, do_yield[ec]);
+            http::async_read(ts, b, p, do_yield[ec]);
             if(! ec)
                 break;
         }
@@ -127,7 +129,7 @@ public:
             test_parser<isRequest> p(fc);
             error_code ec = test::error::test_failure;
             ts.close_remote();
-            async_read(ts, b, p, do_yield[ec]);
+            http::async_read(ts, b, p, do_yield[ec]);
             if(! ec)
                 break;
         }
@@ -361,7 +363,7 @@ public:
             request_parser<dynamic_body_type> p;
             error_code ec;
             ts.close_remote();
-            async_read(ts, b, p, do_yield[ec]);
+            http::async_read(ts, b, p, do_yield[ec]);
             BEAST_EXPECT(ec == http::error::end_of_stream);
         }
     }
@@ -524,7 +526,7 @@ public:
             test::stream ts{ioc};
             flat_buffer b;
             request_parser<dynamic_body_type> p;
-            async_read(ts, b, p,
+            http::async_read(ts, b, p,
                 net::bind_executor(
                     s, copyable_handler{}));
         }
@@ -534,7 +536,7 @@ public:
             test::stream ts{ioc};
             flat_buffer b;
             request<dynamic_body_type> m;
-            async_read(ts, b, m,
+            http::async_read(ts, b, m,
                 net::bind_executor(
                     s, copyable_handler{}));
         }

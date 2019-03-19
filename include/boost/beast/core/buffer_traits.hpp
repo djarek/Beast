@@ -241,7 +241,7 @@ public:
     }
 
     /** Returns a mutable buffer sequence representing writable bytes.
-    
+
         Returns a mutable buffer sequence representing the writable
         bytes containing exactly `n` bytes of storage. Memory may be
         reallocated as needed.
@@ -491,6 +491,41 @@ struct is_dynamic_buffer_v2<
     : std::true_type
 {
 };
+
+template <class DynamicBuffer_v2>
+DynamicBuffer_v2&&
+adapt_deprecated_dynamic_buffer_impl(DynamicBuffer_v2&& db, std::true_type)
+{
+    return std::forward<DynamicBuffer_v2>(db);
+}
+
+template <class DeprecatedDynamicBuffer>
+auto
+adapt_deprecated_dynamic_buffer_impl(DeprecatedDynamicBuffer& db, std::false_type) -> decltype(db.dynamic_buffer())
+{
+    return db.dynamic_buffer();
+}
+
+template <class DeprecatedDynamicBuffer>
+dynamic_storage_buffer<DeprecatedDynamicBuffer>
+adapt_deprecated_dynamic_buffer_impl(DeprecatedDynamicBuffer const& db, std::false_type)
+{
+    static_assert(sizeof(DeprecatedDynamicBuffer) < 0,
+        "Deprecated DynamicBuffer must not be copied. Pass by lvalue-reference instead.");
+}
+
+template <class DynamicBuffer>
+auto
+adapt_deprecated_dynamic_buffer(DynamicBuffer&& db)
+    -> decltype(adapt_deprecated_dynamic_buffer_impl(
+        std::forward<DynamicBuffer>(db),
+        net::is_dynamic_buffer_v2<DynamicBuffer>{}))
+{
+    return adapt_deprecated_dynamic_buffer_impl(
+        std::forward<DynamicBuffer>(db),
+        net::is_dynamic_buffer_v2<DynamicBuffer>{});
+}
+
 } // detail
 #endif
 

@@ -461,7 +461,7 @@ template<
 std::size_t
 read(
     SyncReadStream& stream,
-    DynamicBuffer& buffer,
+    DynamicBuffer&& buffer,
     basic_parser<isRequest>& parser);
 
 /** Read a complete message from a stream using a parser.
@@ -518,7 +518,7 @@ template<
 std::size_t
 read(
     SyncReadStream& stream,
-    DynamicBuffer& buffer,
+    DynamicBuffer&& buffer,
     basic_parser<isRequest>& parser,
     error_code& ec);
 
@@ -657,7 +657,7 @@ template<
 std::size_t
 read(
     SyncReadStream& stream,
-    DynamicBuffer& buffer,
+    DynamicBuffer&& buffer,
     message<isRequest, Body, basic_fields<Allocator>>& msg);
 
 /** Read a complete message from a stream.
@@ -717,7 +717,7 @@ template<
 std::size_t
 read(
     SyncReadStream& stream,
-    DynamicBuffer& buffer,
+    DynamicBuffer&& buffer,
     message<isRequest, Body, basic_fields<Allocator>>& msg,
     error_code& ec);
 

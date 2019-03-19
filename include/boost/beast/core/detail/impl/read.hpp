@@ -15,6 +15,7 @@
 #include <boost/beast/core/flat_static_buffer.hpp>
 #include <boost/asio/basic_stream_socket.hpp>
 #include <boost/asio/coroutine.hpp>
+#include <boost/asio/read.hpp>
 #include <boost/throw_exception.hpp>
 
 namespace boost {
@@ -178,6 +179,17 @@ read(
     return bytes_transferred;
 }
 
+struct read_some_condition
+{
+    std::size_t operator()(error_code ec, std::size_t n)
+    {
+        if (n > 0 || ec)
+            return 0;
+        else
+            return 65535;
+    }
+};
+
 template<
     class SyncReadStream,
     class DynamicBuffer,
@@ -186,38 +198,36 @@ template<
 std::size_t
 read(
     SyncReadStream& stream,
-    DynamicBuffer& buffer,
+    DynamicBuffer&& buffer,
     CompletionCondition cond,
     error_code& ec)
 {
     static_assert(is_sync_read_stream<SyncReadStream>::value,
         "SyncReadStream type requirements not met");
-    static_assert(
-        net::is_dynamic_buffer<DynamicBuffer>::value,
-        "DynamicBuffer type requirements not met");
+    // static_assert(
+    //     net::is_dynamic_buffer<DynamicBuffer>::value,
+    //     "DynamicBuffer type requirements not met");
     static_assert(
         detail::is_invocable<CompletionCondition,
             void(error_code&, std::size_t, DynamicBuffer&)>::value,
         "CompletionCondition type requirements not met");
     ec = {};
+
+    std::size_t bytes_transferred = 1;
     std::size_t total = 0;
-    std::size_t max_size;
-    std::size_t max_prepare;
     for(;;)
     {
-        max_size = cond(ec, total, buffer);
-        max_prepare = std::min<std::size_t>(
-            std::max<std::size_t>(
-                512, buffer.capacity() - buffer.size()),
-            std::min<std::size_t>(
-                max_size, buffer.max_size() - buffer.size()));
-        if(max_prepare == 0)
+        if (cond(ec, total, buffer) == 0 || bytes_transferred == 0)
             break;
-        std::size_t const bytes_transferred =
-            stream.read_some(buffer.prepare(max_prepare), ec);
-        buffer.commit(bytes_transferred);
+        bytes_transferred = net::read(
+            stream,
+            detail::adapt_deprecated_dynamic_buffer(
+                std::forward<DynamicBuffer>(buffer)),
+            read_some_condition{},
+            ec);
         total += bytes_transferred;
     }
+
     return total;
 }
 

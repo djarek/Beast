@@ -51,19 +51,22 @@ template<class DynamicBuffer>
 #if BOOST_BEAST_DOXYGEN
 __implementation_defined__
 #else
-detail::ostream_helper<
-    DynamicBuffer, char, std::char_traits<char>,
-        detail::basic_streambuf_movable::value>
+auto
 #endif
-ostream(DynamicBuffer buffer)
+ostream(DynamicBuffer&& buffer) -> detail::ostream_helper<
+    typename std::decay<
+        decltype(detail::adapt_deprecated_dynamic_buffer(
+            std::forward<DynamicBuffer>(buffer)))>::type,
+    char, std::char_traits<char>,
+    detail::basic_streambuf_movable::value>
 {
-    static_assert(
-        net::is_dynamic_buffer<DynamicBuffer>::value,
-        "DynamicBuffer type requirements not met");
+    // static_assert(
+    //     net::is_dynamic_buffer<DynamicBuffer>::value,
+    //     "DynamicBuffer type requirements not met");
+    auto db = detail::adapt_deprecated_dynamic_buffer(std::forward<DynamicBuffer>(buffer));
     return detail::ostream_helper<
-        DynamicBuffer, char, std::char_traits<char>,
-            detail::basic_streambuf_movable::value>(
-                std::move(buffer));
+        decltype(db), char, std::char_traits<char>,
+            detail::basic_streambuf_movable::value>{std::move(db)};
 }
 
 //------------------------------------------------------------------------------

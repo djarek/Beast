@@ -281,17 +281,17 @@ template<
 std::size_t
 read_some(
     SyncReadStream& stream,
-    DynamicBuffer& buffer,
+    DynamicBuffer&& buffer,
     basic_parser<isRequest>& parser,
     error_code& ec)
 {
     static_assert(
         is_sync_read_stream<SyncReadStream>::value,
         "SyncReadStream type requirements not met");
-    static_assert(
-        net::is_dynamic_buffer<DynamicBuffer>::value,
-        "DynamicBuffer type requirements not met");
-    return beast::detail::read(stream, buffer,
+    // static_assert(
+    //     net::is_dynamic_buffer<DynamicBuffer>::value,
+    //     "DynamicBuffer type requirements not met");
+    return beast::detail::read(stream, std::forward<DynamicBuffer>(buffer),
         detail::read_some_condition<
             isRequest>{parser}, ec);
 }
@@ -349,18 +349,18 @@ template<
 std::size_t
 read_header(
     SyncReadStream& stream,
-    DynamicBuffer& buffer,
+    DynamicBuffer&& buffer,
     basic_parser<isRequest>& parser,
     error_code& ec)
 {
     static_assert(
         is_sync_read_stream<SyncReadStream>::value,
         "SyncReadStream type requirements not met");
-    static_assert(
-        net::is_dynamic_buffer<DynamicBuffer>::value,
-        "DynamicBuffer type requirements not met");
+    // static_assert(
+    //     net::is_dynamic_buffer<DynamicBuffer>::value,
+    //     "DynamicBuffer type requirements not met");
     parser.eager(false);
-    return beast::detail::read(stream, buffer,
+    return beast::detail::read(stream, std::forward<DynamicBuffer>(buffer),
         detail::read_header_condition<
             isRequest>{parser}, ec);
 }
@@ -419,18 +419,18 @@ template<
 std::size_t
 read(
     SyncReadStream& stream,
-    DynamicBuffer& buffer,
+    DynamicBuffer&& buffer,
     basic_parser<isRequest>& parser,
     error_code& ec)
 {
     static_assert(
         is_sync_read_stream<SyncReadStream>::value,
         "SyncReadStream type requirements not met");
-    static_assert(
-        net::is_dynamic_buffer<DynamicBuffer>::value,
-        "DynamicBuffer type requirements not met");
+    // static_assert(
+    //     net::is_dynamic_buffer<DynamicBuffer>::value,
+    //     "DynamicBuffer type requirements not met");
     parser.eager(true);
-    return beast::detail::read(stream, buffer,
+    return beast::detail::read(stream, std::forward<DynamicBuffer>(buffer),
         detail::read_all_condition<
             isRequest>{parser}, ec);
 }
@@ -471,22 +471,22 @@ template<
 std::size_t
 read(
     SyncReadStream& stream,
-    DynamicBuffer& buffer,
+    DynamicBuffer&& buffer,
     message<isRequest, Body, basic_fields<Allocator>>& msg)
 {
     static_assert(
         is_sync_read_stream<SyncReadStream>::value,
         "SyncReadStream type requirements not met");
-    static_assert(
-        net::is_dynamic_buffer<DynamicBuffer>::value,
-        "DynamicBuffer type requirements not met");
+    // static_assert(
+    //     net::is_dynamic_buffer<DynamicBuffer>::value,
+    //     "DynamicBuffer type requirements not met");
     static_assert(is_body<Body>::value,
         "Body type requirements not met");
     static_assert(is_body_reader<Body>::value,
         "BodyReader type requirements not met");
     error_code ec;
     auto const bytes_transferred =
-        http::read(stream, buffer, msg, ec);
+        http::read(stream, std::forward<DynamicBuffer>(buffer), msg, ec);
     if(ec)
         BOOST_THROW_EXCEPTION(system_error{ec});
     return bytes_transferred;
@@ -499,16 +499,16 @@ template<
 std::size_t
 read(
     SyncReadStream& stream,
-    DynamicBuffer& buffer,
+    DynamicBuffer&& buffer,
     message<isRequest, Body, basic_fields<Allocator>>& msg,
     error_code& ec)
 {
     static_assert(
         is_sync_read_stream<SyncReadStream>::value,
         "SyncReadStream type requirements not met");
-    static_assert(
-        net::is_dynamic_buffer<DynamicBuffer>::value,
-        "DynamicBuffer type requirements not met");
+    // static_assert(
+    //     net::is_dynamic_buffer<DynamicBuffer>::value,
+    //     "DynamicBuffer type requirements not met");
     static_assert(is_body<Body>::value,
         "Body type requirements not met");
     static_assert(is_body_reader<Body>::value,
@@ -516,7 +516,7 @@ read(
     parser<isRequest, Body, Allocator> p(std::move(msg));
     p.eager(true);
     auto const bytes_transferred =
-        http::read(stream, buffer, p, ec);
+        http::read(stream, std::forward<DynamicBuffer>(buffer), p, ec);
     if(ec)
         return bytes_transferred;
     msg = p.release();
