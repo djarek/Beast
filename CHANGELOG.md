@@ -2,6 +2,7 @@ Version 254:
 
 * Fix data race in test::stream::connect
 * Fix uninitalized memory use in deflate_stream
+* Fix gcc-8 warning in websocket::stream
 
 --------------------------------------------------------------------------------
 
