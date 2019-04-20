@@ -1,0 +1,186 @@
+jobs:
+  - job: 'Linux'
+    pool:
+      vmImage: 'ubuntu-16.04'
+    strategy:
+      matrix:
+        GCC 8 C++17 Release:
+          TOOLSET: gcc
+          COMPILER: g++-8
+          PACKAGES: g++-8
+          VARIANT: release
+          CXXSTD: 17
+        GCC 8 C++11 UBASAN:
+          TOOLSET: gcc
+          COMPILER: g++-8
+          PACKAGES: g++-8
+          VARIANT: release
+          CXXSTD: 11
+        GCC 7 C++14 Valgrind:
+          TOOLSET: gcc
+          COMPILER: g++-7
+          PACKAGES: g++-7 valgrind
+          VARIANT: beast_valgrind
+          CXXSTD: 14
+        GCC Default C++11 Coverage:
+          TOOLSET: gcc
+          COMPILER: g++
+          PACKAGES: g++ lcov
+          VARIANT: debug
+          CXXSTD: 11
+        Clang 3.8 C++11 Debug:
+          TOOLSET: clang
+          COMPILER: clang++-3.8
+          PACKAGES: clang++-3.8
+          VARIANT: debug
+          CXXSTD: 11
+        Clang Default libc++ C++11 Debug:
+          TOOLSET: clang
+          COMPILER: clang++
+          PACKAGES: libc++-dev libc++abi-dev
+          VARIANT: debug
+          UBSAN_OPTIONS: print_stacktrace=1
+          CXXSTD: 11
+          CXX_FLAGS: <cxxflags>-stdlib=libc++ <linkflags>-stdlib=libc++
+        Clang 8 C++14 Release:
+          TOOLSET: clang
+          COMPILER: clang-8
+          PACKAGES: clang-8
+          VARIANT: release
+          UBSAN_OPTIONS: print_stacktrace=1
+          CXXSTD: 14
+          LLVM_REPO: llvm-toolchain-xenial-8
+
+    steps:
+      - bash: |
+            set -e
+            uname -a
+            sudo -E apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+            if test -n "${LLVM_REPO}" ; then
+              wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+              sudo -E apt-add-repository "deb http://apt.llvm.org/xenial/ ${LLVM_REPO} main"
+            fi
+            sudo -E apt-get update
+            sudo -E apt-get -yq --no-install-suggests --no-install-recommends install ${PACKAGES}
+            ln -s /usr/include/libcxxabi/__cxxabi_config.h /usr/include/c++/v1/__cxxabi_config.h || true
+        displayName: Install packages
+      - bash: |
+            set -e
+            export BUILD_DIR=$(pwd)
+            cd ..
+            $BUILD_DIR/tools/get-boost.sh develop $BUILD_DIR
+            cd boost-root
+            ./bootstrap.sh
+            cp libs/beast/tools/user-config.jam ~/user-config.jam
+            echo "using $TOOLSET : : $(which $COMPILER) : $CXX_FLAGS ;" >> ~/user-config.jam
+        displayName: Get Boost
+      - bash: |
+            set -e
+            cd ../boost-root
+            export TRAVIS=1 TRAVIS_BRANCH=develop  #workaround
+            export BOOST_ROOT=$(pwd)
+            export BEAST_RETRY=false
+            export PATH=$PATH:"`pwd`"
+            libs/beast/tools/build-and-test.sh
+
+        displayName: Build & Run tests
+  - job: 'macOS'
+    pool:
+      vmImage: 'macOS-10.13'
+    strategy:
+      matrix:
+        Xcode 10.1 C++17 Release:
+          TOOLSET: clang
+          VARIANT: release
+          CXXSTD: 17
+          XCODE_APP: /Applications/Xcode_10.1.app
+        Xcode 9.4.1 C++11 Release:
+          TOOLSET: clang
+          VARIANT: release
+          CXXSTD: 11
+          XCODE_APP: /Applications/Xcode_9.4.1.app
+    steps:
+      - bash: |
+          brew install openssl
+        displayName: Get OpenSSL
+      - bash: |
+          set -e
+          sudo xcode-select -switch ${XCODE_APP}
+          which clang++
+          export BUILD_DIR=$(pwd)
+          cd ..
+          $BUILD_DIR/tools/get-boost.sh develop $BUILD_DIR
+          cd boost-root
+          ./bootstrap.sh || cat bootstrap.log
+          cp libs/beast/tools/user-config.jam ~/user-config.jam
+        displayName: Get Boost
+      - bash: |
+            set -e
+            export OPENSSL_ROOT=$(brew --prefix openssl)
+            cd ../boost-root
+            ./b2 -j2 \
+              --debug-configuration \
+              define=BOOST_COROUTINES_NO_DEPRECATION_WARNING=1 \
+              cxxstd=$CXXSTD \
+              libs/beast/test//run-fat-tests \
+              libs/beast/example \
+              toolset=$TOOLSET \
+              variant=$VARIANT
+        displayName: Build & Run tests
+
+  - job: 'Windows'
+    strategy:
+      matrix:
+        # MSVC14.2: # FIXME(djarek): windows-2019 doesn't have vcpkg
+        #   VM_IMAGE: 'windows-2019'
+        #   TOOLSET: msvc-14.2
+        #   CXXSTD: 17
+        #   ADDRMODEL: 64
+        MSVC14.1 C++17 x64:
+          VM_IMAGE: 'vs2017-win2016'
+          TOOLSET: msvc-14.1
+          CXXSTD: 17
+          ADDRMODEL: 64
+        MSVC14.0 C++11 x64:
+          VM_IMAGE: 'vs2017-win2016'
+          TOOLSET: msvc-14.0
+          CXXSTD: 11
+          ADDRMODEL: 64
+    pool:
+      vmImage: $(VM_IMAGE)
+    steps:
+      - bash: |
+          vcpkg install openssl --triplet "x$ADDRMODEL""-windows"
+        displayName: Get OpenSSL
+
+      - bash: |
+          set -e
+          export BUILD_DIR=$(pwd)
+          cd ..
+          $BUILD_DIR/tools/get-boost.sh develop $BUILD_DIR
+          cd boost-root
+          ./bootstrap.sh
+          cp libs/beast/tools/user-config.jam ~/user-config.jam
+        displayName: Get Boost
+
+      - bash: |
+          set -e
+          echo "VCPKG_ROOT: $VCPKG_INSTALLATION_ROOT"
+          export OPENSSL_ROOT="$VCPKG_INSTALLATION_ROOT""/installed/x$ADDRMODEL""-windows"
+          cd ../boost-root
+          ./b2 -j2 \
+            --debug-configuration \
+            variant=debug \
+            cxxstd=$CXXSTD \
+            address-model=$ADDRMODEL \
+            toolset=$TOOLSET \
+            libs/beast/example
+          ./b2 -j2 \
+            --debug-configuration \
+            variant=debug,release \
+            cxxstd=$CXXSTD \
+            address-model=$ADDRMODEL \
+            toolset=$TOOLSET \
+            --verbose-test \
+            libs/beast/test//run-fat-tests
+        displayName: Build & Run tests
