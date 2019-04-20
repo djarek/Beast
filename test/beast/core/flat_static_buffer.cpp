@@ -35,7 +35,10 @@ public:
     void
     testDynamicBuffer()
     {
-        test_dynamic_buffer(flat_static_buffer<13>{});
+        test_dynamic_buffer_v1(flat_static_buffer<13>{});
+        test_mutable_dynamic_buffer_v1(flat_static_buffer<13>{});
+        flat_static_buffer<13> b;
+        test_dynamic_buffer_v2(b);
     }
 
     void

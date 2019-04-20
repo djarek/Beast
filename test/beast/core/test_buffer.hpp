@@ -271,98 +271,13 @@ buffers_fill(
     }
 }
 
-template<class MutableDynamicBuffer>
-void
-test_mutable_dynamic_buffer(
-    MutableDynamicBuffer const&,
-    std::false_type)
-{
-}
-
-template<class MutableDynamicBuffer>
-void
-test_mutable_dynamic_buffer(
-    MutableDynamicBuffer const& b0,
-    std::true_type)
-{
-    BOOST_STATIC_ASSERT(
-        net::is_mutable_buffer_sequence<typename
-            MutableDynamicBuffer::mutable_data_type>::value);
-
-    BOOST_STATIC_ASSERT(
-        std::is_convertible<
-            typename MutableDynamicBuffer::mutable_data_type,
-            typename MutableDynamicBuffer::const_buffers_type>::value);
-
-    string_view src = "Hello, world!";
-    if(src.size() > b0.max_size())
-        src = {src.data(), b0.max_size()};
-
-    // modify readable bytes
-    {
-        MutableDynamicBuffer b(b0);
-        auto const mb = b.prepare(src.size());
-        BEAST_EXPECT(buffer_bytes(mb) == src.size());
-        buffers_fill(mb, '*');
-        b.commit(src.size());
-        BEAST_EXPECT(b.size() == src.size());
-        BEAST_EXPECT(
-            beast::buffers_to_string(b.data()) ==
-            std::string(src.size(), '*'));
-        BEAST_EXPECT(
-            beast::buffers_to_string(b.cdata()) ==
-            std::string(src.size(), '*'));
-        auto const n = net::buffer_copy(
-            b.data(), net::const_buffer(
-                src.data(), src.size()));
-        BEAST_EXPECT(n == src.size());
-        BEAST_EXPECT(
-            beast::buffers_to_string(b.data()) == src);
-        BEAST_EXPECT(
-            beast::buffers_to_string(b.cdata()) == src);
-    }
-
-    // mutable to const sequence conversion
-    {
-        MutableDynamicBuffer b(b0);
-        b.commit(net::buffer_copy(
-            b.prepare(src.size()),
-            net::const_buffer(src.data(), src.size())));
-        auto mb = b.data();
-        auto cb = static_cast<
-            MutableDynamicBuffer const&>(b).data();
-        auto cbc = b.cdata();
-        BEAST_EXPECT(
-            beast::buffers_to_string(b.data()) == src);
-        BEAST_EXPECT(
-            beast::buffers_to_string(b.cdata()) == src);
-        beast::test_buffer_sequence(cb);
-        beast::test_buffer_sequence(cbc);
-        beast::test_buffer_sequence(mb);
-        {
-            decltype(mb)  mb2(mb);
-            mb = mb2;
-            decltype(cb)  cb2(cb);
-            cb = cb2;
-            decltype(cbc) cbc2(cbc);
-            cbc = cbc2;
-        }
-        {
-            decltype(cb)  cb2(mb);
-            decltype(cbc) cbc2(mb);
-            cb2 = mb;
-            cbc2 = mb;
-        }
-    }
-}
-
 } // detail
 
 /** Test an instance of a dynamic buffer or mutable dynamic buffer.
 */
 template<class DynamicBuffer>
 void
-test_dynamic_buffer(
+test_dynamic_buffer_v1(
     DynamicBuffer const& b0)
 {
     BOOST_STATIC_ASSERT(
@@ -570,10 +485,128 @@ test_dynamic_buffer(
         }
         } } }
     }
+}
 
-    // MutableDynamicBuffer refinement
-    detail::test_mutable_dynamic_buffer(b0,
-        is_mutable_dynamic_buffer<DynamicBuffer>{});
+template<class MutableDynamicBuffer>
+void
+test_mutable_dynamic_buffer_v1(
+    MutableDynamicBuffer const& b0)
+{
+    BOOST_STATIC_ASSERT(
+        net::is_mutable_buffer_sequence<typename
+            MutableDynamicBuffer::mutable_data_type>::value);
+
+    BOOST_STATIC_ASSERT(
+        std::is_convertible<
+            typename MutableDynamicBuffer::mutable_data_type,
+            typename MutableDynamicBuffer::const_buffers_type>::value);
+
+    string_view src = "Hello, world!";
+    if(src.size() > b0.max_size())
+        src = {src.data(), b0.max_size()};
+
+    // modify readable bytes
+    {
+        MutableDynamicBuffer b(b0);
+        auto const mb = b.prepare(src.size());
+        BEAST_EXPECT(buffer_bytes(mb) == src.size());
+        detail::buffers_fill(mb, '*');
+        b.commit(src.size());
+        BEAST_EXPECT(b.size() == src.size());
+        BEAST_EXPECT(
+            beast::buffers_to_string(b.data()) ==
+            std::string(src.size(), '*'));
+        BEAST_EXPECT(
+            beast::buffers_to_string(b.cdata()) ==
+            std::string(src.size(), '*'));
+        auto const n = net::buffer_copy(
+            b.data(), net::const_buffer(
+                src.data(), src.size()));
+        BEAST_EXPECT(n == src.size());
+        BEAST_EXPECT(
+            beast::buffers_to_string(b.data()) == src);
+        BEAST_EXPECT(
+            beast::buffers_to_string(b.cdata()) == src);
+    }
+
+    // mutable to const sequence conversion
+    {
+        MutableDynamicBuffer b(b0);
+        b.commit(net::buffer_copy(
+            b.prepare(src.size()),
+            net::const_buffer(src.data(), src.size())));
+        auto mb = b.data();
+        auto cb = static_cast<
+            MutableDynamicBuffer const&>(b).data();
+        auto cbc = b.cdata();
+        BEAST_EXPECT(
+            beast::buffers_to_string(b.data()) == src);
+        BEAST_EXPECT(
+            beast::buffers_to_string(b.cdata()) == src);
+        beast::test_buffer_sequence(cb);
+        beast::test_buffer_sequence(cbc);
+        beast::test_buffer_sequence(mb);
+        {
+            decltype(mb)  mb2(mb);
+            mb = mb2;
+            decltype(cb)  cb2(cb);
+            cb = cb2;
+            decltype(cbc) cbc2(cbc);
+            cbc = cbc2;
+        }
+        {
+            decltype(cb)  cb2(mb);
+            decltype(cbc) cbc2(mb);
+            cb2 = mb;
+            cbc2 = mb;
+        }
+    }
+}
+
+template<class DynamicBuffer>
+void
+test_dynamic_buffer_v2(
+    DynamicBuffer const& b0)
+{
+    DynamicBuffer b(b0);
+    auto const& b1 = b;
+
+    b.grow(0);
+    BEAST_EXPECT(b.size() == 0);
+    BEAST_EXPECT(buffer_bytes( b.data(0, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes( b.data(1, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes( b.data(1, 1)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(0, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(1, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(1, 1)) == 0);
+
+    b.grow(10);
+    BEAST_EXPECT(b.size() == 10);
+    BEAST_EXPECT(buffer_bytes( b.data(0, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes( b.data(1, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes( b.data(1, 1)) == 1);
+    BEAST_EXPECT(buffer_bytes( b.data(0, 10)) == 10);
+    BEAST_EXPECT(buffer_bytes( b.data(0, 20)) == 10);
+    BEAST_EXPECT(buffer_bytes( b.data(1, 20)) == 9);
+    BEAST_EXPECT(buffer_bytes( b.data(10, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes( b.data(10, 10)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(0, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(1, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(1, 1)) == 1);
+    BEAST_EXPECT(buffer_bytes(b1.data(0, 10)) == 10);
+    BEAST_EXPECT(buffer_bytes(b1.data(0, 20)) == 10);
+    BEAST_EXPECT(buffer_bytes(b1.data(1, 20)) == 9);
+    BEAST_EXPECT(buffer_bytes(b1.data(10, 0)) == 0);
+    BEAST_EXPECT(buffer_bytes(b1.data(10, 10)) == 0);
+
+    b.shrink(1);
+    BEAST_EXPECT(b.size() == 9);
+    b.shrink(2);
+    BEAST_EXPECT(b.size() == 7);
+    b.consume(3);
+    BEAST_EXPECT(b.size() == 4);
+    b.consume(50);
+    BEAST_EXPECT(b.size() == 0);
 }
 
 } // beast

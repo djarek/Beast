@@ -39,7 +39,10 @@ public:
     void
     testDynamicBuffer()
     {
-        test_dynamic_buffer(static_buffer<13>{});
+        test_dynamic_buffer_v1(static_buffer<13>{});
+        test_mutable_dynamic_buffer_v1(static_buffer<13>{});
+        static_buffer<13> b;
+        test_dynamic_buffer_v2(b);
     }
 
     void

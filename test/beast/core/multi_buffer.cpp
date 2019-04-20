@@ -35,6 +35,7 @@ public:
     BOOST_STATIC_ASSERT(
         is_mutable_dynamic_buffer<multi_buffer>::value);
 
+/*
 #if ! BOOST_WORKAROUND(BOOST_LIBSTDCXX_VERSION, < 50000) && \
     ! BOOST_WORKAROUND(BOOST_MSVC, < 1910)
     BOOST_STATIC_ASSERT(std::is_trivially_copyable<
@@ -42,6 +43,7 @@ public:
     BOOST_STATIC_ASSERT(std::is_trivially_copyable<
         multi_buffer::mutable_data_type>::value);
 #endif
+*/
 
     template<class Alloc1, class Alloc2>
     static
@@ -164,7 +166,9 @@ public:
     {
         multi_buffer b(30);
         BEAST_EXPECT(b.max_size() == 30);
-        test_dynamic_buffer(b);
+        test_dynamic_buffer_v1(b);
+        test_mutable_dynamic_buffer_v1(b);
+        test_dynamic_buffer_v2(b);
     }
 
     void
@@ -814,15 +818,185 @@ public:
     }
 
     void
+    testMultiBuffer()
+    {
+        auto const check =
+            [](
+                multi_buffer::const_buffers_type b,
+                std::size_t n, long len)
+            {
+                BEAST_EXPECT(
+                    net::buffer_size(b) == n);
+                BEAST_EXPECT(
+                    buffer_bytes(b) == n);
+                BEAST_EXPECT(std::distance(
+                    b.begin(), b.end()) == len);
+            };
+
+        // length <= 1
+        {
+            multi_buffer b;
+
+            check(b.data(0, 0), 0, 0);
+            check(b.data(0, 1), 0, 0);
+            check(b.data(1, 0), 0, 0);
+            check(b.data(1, 1), 0, 0);
+
+            b.grow(99);
+            BEAST_EXPECT(b.size() == 99);
+            BEAST_EXPECT(b.capacity() == 512);
+
+            check(b.data(  0,    0),  0,   0);
+            check(b.data(  0,    1),  1,   1);
+            check(b.data(  1,    0),  0,   0);
+            check(b.data(  1,    1),  1,   1);
+
+            check(b.data(  0,   50), 50,   1);
+            check(b.data(  0,   99), 99,   1);
+            check(b.data(  0,  100), 99,   1);
+
+            check(b.data( 50,  25),  25,   1);
+            check(b.data( 50,  50),  49,   1);
+
+            b.shrink(20);
+            BEAST_EXPECT(b.size() == 79);
+            BEAST_EXPECT(b.capacity() == 512);
+
+            check(b.data(  0,    0),  0,   0);
+            check(b.data(  0,    1),  1,   1);
+            check(b.data(  1,    0),  0,   0);
+            check(b.data(  1,    1),  1,   1);
+
+            check(b.data(  0,   50), 50,   1);
+            check(b.data(  0,   99), 79,   1);
+            check(b.data(  0,  100), 79,   1);
+
+            check(b.data( 50,  25),  25,   1);
+            check(b.data( 50,  50),  29,   1);
+
+            b.grow(433);
+            BEAST_EXPECT(b.size() == 512);
+            BEAST_EXPECT(b.capacity() == 512);
+
+            check(b.data(  0,    0),   0,   0);
+            check(b.data(  0,    1),   1,   1);
+            check(b.data(  1,    0),   0,   0);
+            check(b.data(  1,    1),   1,   1);
+
+            check(b.data(  0,  200), 200,   1);
+            check(b.data(  0,  512), 512,   1);
+            check(b.data(  0,  600), 512,   1);
+
+            check(b.data(200,  250), 250,   1);
+            check(b.data(200,  315), 312,   1);
+
+            b.consume(12);
+
+            check(b.data(  0,    0),   0,   0);
+            check(b.data(  0,    1),   1,   1);
+            check(b.data(  1,    0),   0,   0);
+            check(b.data(  1,    1),   1,   1);
+
+            check(b.data(  0,  200), 200,   1);
+            check(b.data(  0,  500), 500,   1);
+            check(b.data(  0,  512), 500,   1);
+            check(b.data(  0,  600), 500,   1);
+
+            check(b.data(200,  250), 250,   1);
+            check(b.data(200,  315), 300,   1);
+
+            b.shrink(9999);
+            BEAST_EXPECT(b.capacity() > 0);
+            BEAST_EXPECT(b.size() == 0);
+            check(b.data(0, 9999), 0, 0);
+        }
+
+        // length <= 2
+        {
+            multi_buffer b;
+
+            b.grow(512);
+            BEAST_EXPECT(b.size() == 512);
+            BEAST_EXPECT(b.capacity() == 512);
+
+            b.grow(487);
+            BEAST_EXPECT(b.size() == 999);
+            BEAST_EXPECT(b.capacity() == 1024);
+
+            check(b.data(  0, 500), 500, 1);
+            check(b.data(  0, 512), 512, 1);
+            check(b.data(  0, 513), 513, 2);
+            check(b.data(  0, 999), 999, 2);
+            check(b.data(500, 200), 200, 2);
+            check(b.data(500, 999), 499, 2);
+            check(b.data(600, 100), 100, 1);
+            check(b.data(600, 999), 399, 1);
+
+            b.shrink(499);
+            check(b.data(  0, 500), 500, 1);
+            check(b.data(  0, 512), 500, 1);
+            check(b.data(  0, 513), 500, 1);
+            check(b.data(  0,2000), 500, 1);
+
+            b.grow(499);
+            b.consume(100);
+            BEAST_EXPECT(b.size() == 899);
+            BEAST_EXPECT(b.capacity() == 924);
+
+            check(b.data(  0, 500), 500, 2);
+            check(b.data(  0, 512), 512, 2);
+            check(b.data(  0, 513), 513, 2);
+            check(b.data(  0, 899), 899, 2);
+            check(b.data(  0, 999), 899, 2);
+
+            b.shrink(9999);
+            BEAST_EXPECT(b.capacity() > 0);
+            BEAST_EXPECT(b.size() == 0);
+            check(b.data(0, 9999), 0, 0);
+        }
+
+        // length <= 3
+        {
+            multi_buffer b;
+            b.grow(512);
+            b.grow(512);
+            b.grow(188);
+            BEAST_EXPECT(b.capacity() == 2048);
+            check(b.data(0, 1212), 1212, 3);
+            b.consume(12);
+            check(b.data(0, 1200), 1200, 3);
+
+            check(b.data(   0,  250),  250, 1);
+            check(b.data(   0,  500),  500, 1);
+            check(b.data(   0, 1000), 1000, 2);
+            check(b.data(   0, 1200), 1200, 3);
+            check(b.data(   0, 2000), 1200, 3);
+
+            check(b.data( 250,  500),  500, 2);
+            check(b.data( 250, 1000),  950, 3);
+            check(b.data( 500,  500),  500, 1);
+            check(b.data( 500, 1000),  700, 2);
+
+            check(b.data( 600,  100),  100, 1);
+            check(b.data( 600,  412),  412, 1);
+            check(b.data( 600,  512),  512, 2);
+
+            b.shrink(9999);
+            BEAST_EXPECT(b.capacity() > 0);
+            BEAST_EXPECT(b.size() == 0);
+            check(b.data(0, 9999), 0, 0);
+        }
+    }
+
+    void
     run() override
     {
-#if 1
         testShrinkToFit();
         testDynamicBuffer();
         testMembers();
         testMatrix1();
         testMatrix2();
-#endif
+        testMultiBuffer();
     }
 };
 

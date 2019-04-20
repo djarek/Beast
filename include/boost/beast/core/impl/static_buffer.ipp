@@ -11,6 +11,7 @@
 #define BOOST_BEAST_IMPL_STATIC_BUFFER_IPP
 
 #include <boost/beast/core/static_buffer.hpp>
+#include <boost/beast/core/detail/clamp.hpp>
 #include <boost/beast/core/detail/type_traits.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/throw_exception.hpp>
@@ -39,12 +40,15 @@ clear() noexcept
     out_size_ = 0;
 }
 
+#ifndef BOOST_ASIO_NO_DYNAMIC_BUFFER_V1
+
 auto
 static_buffer_base::
 data() const noexcept ->
     const_buffers_type
 {
-    if(in_off_ + in_size_ <= capacity_)
+    if(! detail::sum_exceeds(
+            in_off_, in_size_, capacity_))
         return {
             net::const_buffer{
                 begin_ + in_off_, in_size_},
@@ -62,7 +66,8 @@ static_buffer_base::
 data() noexcept ->
     mutable_data_type
 {
-    if(in_off_ + in_size_ <= capacity_)
+    if(! detail::sum_exceeds(
+            in_off_, in_size_, capacity_))
         return {
             net::mutable_buffer{
                 begin_ + in_off_, in_size_},
@@ -80,14 +85,15 @@ static_buffer_base::
 prepare(std::size_t n) ->
     mutable_buffers_type
 {
-    using net::mutable_buffer;
     if(n > capacity_ - in_size_)
         BOOST_THROW_EXCEPTION(std::length_error{
-            "static_buffer overflow"});
+            "static_buffer limit"});
     out_size_ = n;
-    auto const out_off =
-        (in_off_ + in_size_) % capacity_;
-    if(out_off + out_size_ <= capacity_ )
+    auto out_off = in_off_ + in_size_;
+    if(out_off >= capacity_)
+        out_off -= capacity_;
+    if(! detail::sum_exceeds(
+            out_off, out_size_, capacity_))
         return {
             net::mutable_buffer{
                 begin_ + out_off, out_size_},
@@ -108,13 +114,84 @@ commit(std::size_t n) noexcept
     out_size_ = 0;
 }
 
+#endif
+
+auto
+static_buffer_base::
+data(std::size_t pos, std::size_t n) noexcept ->
+    mutable_buffers_type
+{
+    net::mutable_buffer b1;
+    net::mutable_buffer b2;
+    if(pos >= size() || n == 0)
+        return { b1, b2 };
+    if(detail::sum_exceeds(pos, n, size()))
+        n = size() - pos;
+    if(in_off_ + pos >= capacity_)
+        pos -= capacity_;
+    b1 = { begin_ + in_off_ + pos, (std::min)(
+        capacity_ - in_off_, n) };
+    if(b1.size() < n)
+        b2 = { begin_, n - b1.size() };
+    return { b1, b2 };
+}
+
+auto
+static_buffer_base::
+data(std::size_t pos, std::size_t n) const noexcept ->
+    const_buffers_type
+{
+    net::const_buffer b1;
+    net::const_buffer b2;
+    if(pos >= size() || n == 0)
+        return { b1, b2 };
+    if(detail::sum_exceeds(pos, n, size()))
+        n = size() - pos;
+    if(in_off_ + pos >= capacity_)
+        pos -= capacity_;
+    b1 = { begin_ + in_off_ + pos, (std::min)(
+        capacity_ - in_off_, n) };
+    if(b1.size() < n)
+        b2 = { begin_, n - b1.size() };
+    return { b1, b2 };
+}
+
+void
+static_buffer_base::
+grow(std::size_t n)
+{
+    if(n > capacity_ - in_size_)
+        BOOST_THROW_EXCEPTION(std::length_error{
+            "static_buffer limit"});
+    in_size_ += n;
+    out_size_ = 0;
+}
+
+void
+static_buffer_base::
+shrink(std::size_t n)
+{
+    if(n >= in_size_)
+    {
+        in_off_ = 0;
+        in_size_ = 0;
+    }
+    else
+    {
+        in_size_ -= n;
+    }
+    out_size_ = 0;
+}
+
 void
 static_buffer_base::
 consume(std::size_t n) noexcept
 {
     if(n < in_size_)
     {
-        in_off_ = (in_off_ + n) % capacity_;
+        in_off_ = in_off_ + n;
+        if(in_off_ > capacity_)
+            in_off_ -= capacity_;
         in_size_ -= n;
     }
     else

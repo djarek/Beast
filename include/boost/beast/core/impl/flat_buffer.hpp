@@ -10,6 +10,7 @@
 #ifndef BOOST_BEAST_IMPL_FLAT_BUFFER_HPP
 #define BOOST_BEAST_IMPL_FLAT_BUFFER_HPP
 
+#include <boost/beast/core/detail/clamp.hpp>
 #include <boost/core/exchange.hpp>
 #include <boost/assert.hpp>
 #include <boost/throw_exception.hpp>
@@ -256,7 +257,13 @@ reserve(std::size_t n)
     if(max_ < n)
         max_ = n;
     if(n > capacity())
-        prepare(n - size());
+    {
+        auto const len = size();
+        grow(n - len);
+        out_ = in_ + len;
+        last_ = out_;
+        BOOST_ASSERT(out_ <= end_);
+    }
 }
 
 template<class Allocator>
@@ -300,6 +307,8 @@ clear() noexcept
 
 //------------------------------------------------------------------------------
 
+#ifndef BOOST_ASIO_NO_DYNAMIC_BUFFER_V1
+
 template<class Allocator>
 auto
 basic_flat_buffer<Allocator>::
@@ -307,14 +316,64 @@ prepare(std::size_t n) ->
     mutable_buffers_type
 {
     auto const len = size();
-    if(len > max_ || n > (max_ - len))
+    if(detail::sum_exceeds(len, n, max_size()))
         BOOST_THROW_EXCEPTION(std::length_error{
-            "basic_flat_buffer too long"});
+            "basic_flat_buffer too big"});
+    grow(n);
+    out_ = in_ + len;
+    BOOST_ASSERT(out_ <= end_);
+    BOOST_ASSERT(last_ == out_ + n);
+    BOOST_ASSERT(last_ <= end_);
+    return {out_, n};
+}
+
+#endif
+
+template<class Allocator>
+auto
+basic_flat_buffer<Allocator>::
+data(std::size_t pos, std::size_t n) noexcept ->
+    mutable_buffers_type
+{
+    auto const len = size();
+    if(pos > len)
+        return {};
+    if(detail::sum_exceeds(pos, n, len))
+        n = len - pos;
+    return mutable_buffers_type{
+        in_ + pos, n };
+}
+
+template<class Allocator>
+auto
+basic_flat_buffer<Allocator>::
+data(std::size_t pos, std::size_t n) const noexcept ->
+    const_buffers_type
+{
+    auto const len = size();
+    if(pos > len)
+        return {};
+    if(detail::sum_exceeds(pos, n, len))
+        n = len - pos;
+    return const_buffers_type{
+        in_ + pos, n };
+}
+
+template<class Allocator>
+void
+basic_flat_buffer<Allocator>::
+grow(std::size_t n)
+{
+    auto const len = size();
+    if(detail::sum_exceeds(len, n, max_size()))
+        BOOST_THROW_EXCEPTION(std::length_error{
+            "basic_flat_buffer too big"});
     if(n <= dist(out_, end_))
     {
         // existing capacity is sufficient
-        last_ = out_ + n;
-        return{out_, n};
+        out_ = out_ + n;
+        last_ = out_;
+        return;
     }
     if(n <= capacity() - len)
     {
@@ -327,14 +386,15 @@ prepare(std::size_t n) ->
             std::memmove(begin_, in_, len);
         }
         in_ = begin_;
-        out_ = in_ + len;
-        last_ = out_ + n;
-        return {out_, n};
+        out_ = in_ + len + n;
+        last_ = out_;
+        return;
     }
     // allocate a new buffer
+    double const growth_factor = 1.5;
     auto const new_size = (std::min<std::size_t>)(
-        max_,
-        (std::max<std::size_t>)(2 * len, len + n));
+        max_, (std::max<std::size_t>)(static_cast<
+            std::size_t>(growth_factor * len), len + n));
     auto const p = alloc(new_size);
     if(begin_)
     {
@@ -346,10 +406,24 @@ prepare(std::size_t n) ->
     }
     begin_ = p;
     in_ = begin_;
-    out_ = in_ + len;
-    last_ = out_ + n;
+    out_ = in_ + len + n;
+    last_ = out_;
     end_ = begin_ + new_size;
-    return {out_, n};
+    return;
+}
+
+template<class Allocator>
+void
+basic_flat_buffer<Allocator>::
+shrink(std::size_t n)
+{
+    if(n >= capacity())
+    {
+        clear();
+        return;
+    }
+    out_ = in_ + size() - n;
+    last_ = out_;
 }
 
 template<class Allocator>

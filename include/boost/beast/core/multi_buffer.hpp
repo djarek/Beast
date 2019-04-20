@@ -11,6 +11,7 @@
 #define BOOST_BEAST_MULTI_BUFFER_HPP
 
 #include <boost/beast/core/detail/config.hpp>
+#include <boost/beast/core/buffer_traits.hpp>
 #include <boost/beast/core/detail/allocator.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/core/empty_value.hpp>
@@ -71,25 +72,34 @@ class basic_multi_buffer
         detail::allocator_traits<Allocator>::
             template rebind_alloc<char>;
 
-    static bool constexpr default_nothrow =
-        std::is_nothrow_default_constructible<Allocator>::value;
+    using alloc_traits =
+        beast::detail::allocator_traits<base_alloc_type>;
 
     // Storage for the list of buffers representing the input
     // and output sequences. The allocation for each element
     // contains `element` followed by raw storage bytes.
     class element;
 
+    using list_type = typename boost::intrusive::make_list<element,
+        boost::intrusive::constant_time_size<true>>::type;
+
+    using iter = typename list_type::iterator;
+
+    std::size_t max_;
+    list_type list_;            // list of allocated buffers
+    iter out_;                  // element that contains out_pos_
+    std::size_t in_size_ = 0;   // size of the input sequence
+    std::size_t in_pos_ = 0;    // input offset in list_.front()
+    std::size_t out_pos_ = 0;   // output offset in *out_
+    std::size_t out_end_ = 0;   // output end offset in list_.back()
+
+    static bool constexpr default_nothrow =
+        std::is_nothrow_default_constructible<Allocator>::value;
+
     template<bool>
     class readable_bytes;
 
-    using alloc_traits =
-        beast::detail::allocator_traits<base_alloc_type>;
-    using list_type = typename boost::intrusive::make_list<element,
-        boost::intrusive::constant_time_size<true>>::type;
-    using iter = typename list_type::iterator;
     using const_iter = typename list_type::const_iterator;
-
-    using size_type = typename alloc_traits::size_type;
 
     using pocma = typename
         alloc_traits::propagate_on_container_move_assignment;
@@ -105,13 +115,8 @@ class basic_multi_buffer
         typename std::iterator_traits<const_iter>::iterator_category>::value,
             "BidirectionalIterator type requirements not met");
 
-    std::size_t max_;
-    list_type list_;        // list of allocated buffers
-    iter out_;              // element that contains out_pos_
-    size_type in_size_ = 0; // size of the input sequence
-    size_type in_pos_ = 0;  // input offset in list_.front()
-    size_type out_pos_ = 0; // output offset in *out_
-    size_type out_end_ = 0; // output end offset in list_.back()
+    template<class>
+    friend class detail::dynamic_buffer_adaptor;
 
 public:
     /// The type of allocator used.
@@ -420,15 +425,49 @@ public:
     class mutable_buffers_type;
 #endif
 
+#if 0
+    mutable_buffers_type
+    buffer() noexcept
+    {
+        return {in_, dist(in_, out_)};
+    }
+
+    const_buffers_type
+    buffer() const noexcept
+    {
+        return {in_, dist(in_, out_)};
+    }
+
+    dynamic_storage_buffer<basic_multi_buffer>
+    dynamic_buffer() noexcept
+    {
+        return make_dynamic_buffer(*this);
+    }
+
+    dynamic_storage_buffer<basic_multi_buffer>
+    dynamic_buffer(std::size_t max_size) noexcept
+    {
+        return make_dynamic_buffer(*this, max_size);
+    }
+
+    dynamic_storage_buffer<basic_multi_buffer>
+    operator->() noexcept
+    {
+        return dynamic_buffer();
+    }
+#endif
+
+    //--------------------------------------------------------------------------
+
     /// Returns the number of readable bytes.
-    size_type
+    std::size_t
     size() const noexcept
     {
         return in_size_;
     }
 
     /// Return the maximum number of bytes, both readable and writable, that can ever be held.
-    size_type
+    std::size_t
     max_size() const noexcept
     {
         return max_;
@@ -437,6 +476,8 @@ public:
     /// Return the maximum number of bytes, both readable and writable, that can be held without requiring an allocation.
     std::size_t
     capacity() const noexcept;
+
+#ifndef BOOST_ASIO_NO_DYNAMIC_BUFFER_V1
 
     /** Returns a constant buffer sequence representing the readable bytes
 
@@ -482,7 +523,7 @@ public:
         Strong guarantee.
     */
     mutable_buffers_type
-    prepare(size_type n);
+    prepare(std::size_t n);
 
     /** Append writable bytes to the readable bytes.
 
@@ -504,7 +545,63 @@ public:
         No-throw guarantee.
     */
     void
-    commit(size_type n) noexcept;
+    commit(std::size_t n) noexcept;
+
+#endif
+
+    /** Return a constant buffer sequence representing the underlying memory.
+
+        The returned buffer sequence `u` represents the underlying
+        memory beginning at offset `pos` and where `buffer_size(u) <= n`.
+
+        @param pos The offset to start from. If this is larger than
+        the size of the underlying memory, an empty buffer sequence
+        is returned.
+
+        @param n The maximum number of bytes in the returned sequence,
+        starting from `pos`.
+
+        @return The constant buffer sequence
+    */
+    readable_bytes<false>
+    data(std::size_t pos, std::size_t n) const noexcept;
+
+    /** Return a mutable buffer sequence representing the underlying memory.
+
+        The returned buffer sequence `u` represents the underlying
+        memory beginning at offset `pos` and where `buffer_size(u) <= n`.
+
+        @param pos The offset to start from. If this is larger than
+        the size of the underlying memory, an empty buffer sequence
+        is returned.
+
+        @param n The maximum number of bytes in the returned sequence,
+        starting from `pos`.
+
+        @return The mutable buffer sequence
+    */
+    readable_bytes<true>
+    data(std::size_t pos, std::size_t n) noexcept;
+
+    /** Extend the underlying memory to accommodate additional bytes.
+
+        @param n The number of additional bytes to extend by.
+
+        @throws `length_error` if `size() + n > max_size()`.
+    */
+    void
+    grow(std::size_t n);
+
+    /** Remove bytes from the end of the underlying memory.
+
+        This removes bytes from the end of the underlying memory. If
+        the number of bytes to remove is larger than `size()`, then
+        all underlying memory is emptied.
+
+        @param n The number of bytes to remove.
+    */
+    void
+    shrink(std::size_t n);
 
     /** Remove bytes from beginning of the readable bytes.
 
@@ -522,7 +619,7 @@ public:
         No-throw guarantee.
     */
     void
-    consume(size_type n) noexcept;
+    consume(std::size_t n) noexcept;
 
 private:
     template<class OtherAlloc>

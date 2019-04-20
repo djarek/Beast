@@ -7,10 +7,11 @@
 // Official repository: https://github.com/boostorg/beast
 //
 
-#ifndef BOOST_BEAST_WRITE_OSTREAM_HPP
-#define BOOST_BEAST_WRITE_OSTREAM_HPP
+#ifndef BOOST_BEAST_OSTREAM_HPP
+#define BOOST_BEAST_OSTREAM_HPP
 
 #include <boost/beast/core/detail/config.hpp>
+#include <boost/beast/core/detail/buffer_traits.hpp>
 #include <boost/beast/core/detail/ostream.hpp>
 #include <type_traits>
 #include <streambuf>
@@ -48,21 +49,30 @@ namespace beast {
     lifetime of the output stream.
 */
 template<class DynamicBuffer>
-#if BOOST_BEAST_DOXYGEN
+#ifdef BOOST_BEAST_DOXYGEN
 __implementation_defined__
 #else
-detail::ostream_helper<
-    DynamicBuffer, char, std::char_traits<char>,
-        detail::basic_streambuf_movable::value>
+auto
 #endif
-ostream(DynamicBuffer& buffer)
+ostream(DynamicBuffer&& buffer)
+#ifndef BOOST_BEAST_DOXYGEN
+    -> detail::ostream_helper<
+        decltype(detail::make_dynamic_buffer_adaptor(
+            std::forward<DynamicBuffer>(buffer))),
+        char, std::char_traits<char>,
+            detail::basic_streambuf_movable::value>
+#endif
 {
+#if 0
     static_assert(
         net::is_dynamic_buffer<DynamicBuffer>::value,
         "DynamicBuffer type requirements not met");
+#endif
+    auto b = detail::make_dynamic_buffer_adaptor(
+        std::forward<DynamicBuffer>(buffer));
     return detail::ostream_helper<
-        DynamicBuffer, char, std::char_traits<char>,
-            detail::basic_streambuf_movable::value>{buffer};
+        decltype(b), char, std::char_traits<char>,
+        detail::basic_streambuf_movable::value>{b};
 }
 
 //------------------------------------------------------------------------------

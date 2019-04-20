@@ -11,6 +11,7 @@
 #define BOOST_BEAST_FLAT_BUFFER_HPP
 
 #include <boost/beast/core/detail/config.hpp>
+#include <boost/beast/core/buffer_traits.hpp>
 #include <boost/beast/core/detail/allocator.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/core/empty_value.hpp>
@@ -62,8 +63,18 @@ class basic_flat_buffer
             template rebind_alloc<char>>
 #endif
 {
+    char* begin_;
+    char* in_;
+    char* out_;
+    char* last_;
+    char* end_;
+    std::size_t max_;
+
     template<class OtherAlloc>
     friend class basic_flat_buffer;
+
+    template<class>
+    friend class detail::dynamic_buffer_adaptor;
 
     using base_alloc_type = typename
         detail::allocator_traits<Allocator>::
@@ -87,13 +98,6 @@ class basic_flat_buffer
     {
         return static_cast<std::size_t>(last - first);
     }
-
-    char* begin_;
-    char* in_;
-    char* out_;
-    char* last_;
-    char* end_;
-    std::size_t max_;
 
 public:
     /// The type of allocator used.
@@ -396,17 +400,55 @@ public:
     /// The ConstBufferSequence used to represent the readable bytes.
     using const_buffers_type = net::const_buffer;
 
-    /// The MutableBufferSequence used to represent the readable bytes.
-    using mutable_data_type = net::mutable_buffer;
-
     /// The MutableBufferSequence used to represent the writable bytes.
     using mutable_buffers_type = net::mutable_buffer;
+
+#if 0
+    mutable_buffers_type
+    buffer() noexcept
+    {
+        return {in_, dist(in_, out_)};
+    }
+
+    const_buffers_type
+    buffer() const noexcept
+    {
+        return {in_, dist(in_, out_)};
+    }
+
+    dynamic_storage_buffer<basic_flat_buffer>
+    dynamic_buffer() noexcept
+    {
+        return make_dynamic_buffer(*this);
+    }
+
+    dynamic_storage_buffer<basic_flat_buffer>
+    dynamic_buffer(std::size_t max_size) noexcept
+    {
+        return make_dynamic_buffer(*this, max_size);
+    }
+
+    dynamic_storage_buffer<basic_flat_buffer>
+    operator->() noexcept
+    {
+        return dynamic_buffer();
+    }
+#endif
+
+    //--------------------------------------------------------------------------
 
     /// Returns the number of readable bytes.
     std::size_t
     size() const noexcept
     {
         return dist(in_, out_);
+    }
+
+    /// Return the maximum number of bytes, both readable and writable, that can be held without requiring an allocation.
+    std::size_t
+    capacity() const noexcept
+    {
+        return dist(begin_, end_);
     }
 
     /// Return the maximum number of bytes, both readable and writable, that can ever be held.
@@ -416,12 +458,7 @@ public:
         return max_;
     }
 
-    /// Return the maximum number of bytes, both readable and writable, that can be held without requiring an allocation.
-    std::size_t
-    capacity() const noexcept
-    {
-        return dist(begin_, end_);
-    }
+#ifndef BOOST_ASIO_NO_DYNAMIC_BUFFER_V1
 
     /// Returns a constant buffer sequence representing the readable bytes
     const_buffers_type
@@ -436,6 +473,9 @@ public:
     {
         return data();
     }
+
+    /// The MutableBufferSequence used to represent the readable bytes.
+    using mutable_data_type = net::mutable_buffer;
 
     /// Returns a mutable buffer sequence representing the readable bytes
     mutable_data_type
@@ -489,6 +529,62 @@ public:
     {
         out_ += (std::min)(n, dist(out_, last_));
     }
+
+#endif
+
+    /** Return a constant buffer sequence representing the underlying memory.
+
+        The returned buffer sequence `u` represents the underlying
+        memory beginning at offset `pos` and where `buffer_size(u) <= n`.
+
+        @param pos The offset to start from. If this is larger than
+        the size of the underlying memory, an empty buffer sequence
+        is returned.
+
+        @param n The maximum number of bytes in the returned sequence,
+        starting from `pos`.
+
+        @return The constant buffer sequence
+    */
+    const_buffers_type
+    data(std::size_t pos, std::size_t n) const noexcept;
+
+    /** Return a mutable buffer sequence representing the underlying memory.
+
+        The returned buffer sequence `u` represents the underlying
+        memory beginning at offset `pos` and where `buffer_size(u) <= n`.
+
+        @param pos The offset to start from. If this is larger than
+        the size of the underlying memory, an empty buffer sequence
+        is returned.
+
+        @param n The maximum number of bytes in the returned sequence,
+        starting from `pos`.
+
+        @return The mutable buffer sequence
+    */
+    mutable_buffers_type
+    data(std::size_t pos, std::size_t n) noexcept;
+
+    /** Extend the underlying memory to accommodate additional bytes.
+
+        @param n The number of additional bytes to extend by.
+
+        @throws `length_error` if `size() + n > max_size()`.
+    */
+    void
+    grow(std::size_t n);
+
+    /** Remove bytes from the end of the underlying memory.
+
+        This removes bytes from the end of the underlying memory. If
+        the number of bytes to remove is larger than `size()`, then
+        all underlying memory is emptied.
+
+        @param n The number of bytes to remove.
+    */
+    void
+    shrink(std::size_t n);
 
     /** Remove bytes from beginning of the readable bytes.
 

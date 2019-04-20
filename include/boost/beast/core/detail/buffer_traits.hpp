@@ -10,10 +10,14 @@
 #ifndef BOOST_BEAST_DETAIL_BUFFER_TRAITS_HPP
 #define BOOST_BEAST_DETAIL_BUFFER_TRAITS_HPP
 
+#include <boost/beast/core/detail/clamp.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/config/workaround.hpp>
 #include <boost/type_traits/make_void.hpp>
+#include <boost/throw_exception.hpp>
+#include <algorithm>
 #include <cstdint>
+#include <stdexcept>
 #include <type_traits>
 
 namespace boost {
@@ -89,6 +93,120 @@ buffers_empty(ConstBufferSequence const& buffers)
         ++it;
     }
     return true;
+}
+
+struct dynamic_buffer_access;
+
+template<class B>
+class dynamic_buffer_adaptor
+{
+    B& b_;
+
+public:
+    using const_buffers_type = typename
+        B::const_buffers_type;
+
+    using mutable_buffers_type = typename
+        B::mutable_buffers_type;
+
+    explicit
+    dynamic_buffer_adaptor(B& b)
+        : b_(b)
+    {
+    }
+
+    std::size_t
+    size() const noexcept
+    {
+        return b_.size();
+    }
+
+    std::size_t
+    max_size() const noexcept
+    {
+        return b_.max_size();
+    }
+
+    std::size_t
+    capacity() const noexcept
+    {
+        return b_.capacity();
+    }
+
+#ifndef BOOST_ASIO_NO_DYNAMIC_BUFFER_V1
+    using mutable_data_type = typename
+        B::mutable_data_type;
+
+    const_buffers_type
+    data() const noexcept
+    {
+        return b_.data();
+    }
+
+    const_buffers_type
+    cdata() const noexcept
+    {
+        return b_.data();
+    }
+
+    mutable_data_type
+    data() noexcept
+    {
+        return b_.data();
+    }
+
+    mutable_buffers_type
+    prepare(std::size_t n)
+    {
+        return b_.prepare(n);
+    }
+
+    void
+    commit(std::size_t n) noexcept
+    {
+        b_.commit(n);
+    }
+#endif
+
+    const_buffers_type
+    data(std::size_t pos, std::size_t n) const noexcept
+    {
+        return b_.data(pos, n);
+    }
+
+    mutable_buffers_type
+    data(std::size_t pos, std::size_t n) noexcept
+    {
+        return b_.data(pos, n);
+    }
+
+    void
+    grow(std::size_t n)
+    {
+        b_.grow(n);
+    }
+
+    void
+    shrink(std::size_t n)
+    {
+        b_.shrink(n);
+    }
+
+    void
+    consume(std::size_t n) noexcept
+    {
+        b_.consume(n);
+    }
+};
+
+template<class B>
+dynamic_buffer_adaptor<typename
+    std::remove_reference<B>::type>
+make_dynamic_buffer_adaptor(B&& b) noexcept
+{
+    return dynamic_buffer_adaptor<
+        typename std::remove_reference<B>::type>(
+            std::forward<B>(b));
 }
 
 } // detail

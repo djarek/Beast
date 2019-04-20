@@ -1,3 +1,9 @@
+Version 256:
+
+* Implement DynamicBuffer_v2
+
+--------------------------------------------------------------------------------
+
 Version 255:
 
 * Add idle ping suspend test
