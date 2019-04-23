@@ -13,6 +13,8 @@
 #include <boost/beast/core/string.hpp>
 #include <boost/beast/_experimental/unit_test/suite.hpp>
 
+#include <vector>
+
 namespace boost {
 namespace beast {
 
@@ -28,7 +30,7 @@ public:
 
     BOOST_STATIC_ASSERT(detail::is_contiguous_container<
         std::vector<char>, char>::value);
-    
+
     BOOST_STATIC_ASSERT(detail::is_contiguous_container<
         std::vector<char>, char const>::value);
 

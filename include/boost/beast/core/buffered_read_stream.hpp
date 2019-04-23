@@ -144,12 +144,12 @@ public:
     {
         return next_layer_;
     }
-    
+
     using executor_type =
         beast::executor_type<next_layer_type>;
 
     /** Get the executor associated with the object.
-    
+
         This function may be used to obtain the executor object that the stream
         uses to dispatch handlers for asynchronous operations.
 
@@ -255,7 +255,7 @@ public:
             error_code const& error,      // result of operation
             std::size_t bytes_transferred // number of bytes transferred
         );
-        @endcode        
+        @endcode
         Regardless of whether the asynchronous operation completes
         immediately or not, the handler will not be invoked from within
         this function. Invocation of the handler will be performed in a

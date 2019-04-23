@@ -10,15 +10,8 @@
 #ifndef BOOST_BEAST_DETAIL_TYPE_TRAITS_HPP
 #define BOOST_BEAST_DETAIL_TYPE_TRAITS_HPP
 
-#include <boost/beast/core/error.hpp>
-#include <boost/beast/core/detail/is_invocable.hpp>
-#include <boost/asio/buffer.hpp>
-#include <boost/mp11/function.hpp>
 #include <boost/type_traits/make_void.hpp>
-#include <iterator>
-#include <tuple>
 #include <type_traits>
-#include <string>
 #include <utility>
 
 namespace boost {
@@ -56,12 +49,6 @@ max_alignof()
         max_alignof<U0>() > max_alignof<U1, Us...>() ?
         max_alignof<U0>() : max_alignof<U1, Us...>();
 }
-
-// (since C++17)
-template<class... Ts>
-using make_void = boost::make_void<Ts...>;
-template<class... Ts>
-using void_t = boost::void_t<Ts...>;
 
 // (since C++11) missing from g++4.8
 template<std::size_t Len, class... Ts>

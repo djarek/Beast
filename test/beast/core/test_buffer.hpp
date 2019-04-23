@@ -46,7 +46,7 @@ public:
         b_[0] = {data, size/6};
         data += b_[0].size();
         size -= b_[0].size();
-            
+
         b_[1] = {data, 2*size/5};
         data += b_[1].size();
         size -= b_[1].size();
@@ -239,7 +239,7 @@ struct is_mutable_dynamic_buffer
 };
 
 template<class T>
-struct is_mutable_dynamic_buffer<T, detail::void_t<decltype(
+struct is_mutable_dynamic_buffer<T, boost::void_t<decltype(
     std::declval<typename T::const_buffers_type&>() =
         std::declval<T const&>().data(),
     std::declval<typename T::const_buffers_type&>() =

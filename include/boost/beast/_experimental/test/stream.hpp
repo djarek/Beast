@@ -11,6 +11,7 @@
 #define BOOST_BEAST_TEST_STREAM_HPP
 
 #include <boost/beast/core/detail/config.hpp>
+#include <boost/beast/core/detail/is_invocable.hpp>
 #include <boost/beast/core/bind_handler.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/core/role.hpp>

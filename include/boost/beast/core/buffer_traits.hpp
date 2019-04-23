@@ -12,6 +12,7 @@
 
 #include <boost/beast/core/detail/config.hpp>
 #include <boost/beast/core/detail/buffer_traits.hpp>
+#include <boost/beast/core/detail/is_invocable.hpp>
 #include <boost/beast/core/detail/static_const.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/config/workaround.hpp>

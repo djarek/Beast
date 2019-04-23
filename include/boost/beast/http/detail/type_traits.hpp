@@ -52,7 +52,7 @@ struct is_parser<parser<isRequest, Body, Fields>> : std::true_type {};
 struct fields_model
 {
     struct writer;
-    
+
     string_view method() const;
     string_view reason() const;
     string_view target() const;
@@ -72,11 +72,11 @@ protected:
     void set_keep_alive_impl(unsigned, bool);
 };
 
-template<class T, class = beast::detail::void_t<>>
+template<class T, class = boost::void_t<>>
 struct has_value_type : std::false_type {};
 
 template<class T>
-struct has_value_type<T, beast::detail::void_t<
+struct has_value_type<T, boost::void_t<
     typename T::value_type
         > > : std::true_type {};
 
@@ -89,7 +89,7 @@ template<class T, class = void>
 struct is_body_sized : std::false_type {};
 
 template<class T>
-struct is_body_sized<T, beast::detail::void_t<
+struct is_body_sized<T, boost::void_t<
     typename T::value_type,
         decltype(
     std::declval<std::uint64_t&>() =

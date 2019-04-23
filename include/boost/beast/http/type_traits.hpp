@@ -78,7 +78,7 @@ template<class T, class = void>
 struct is_body_writer : std::false_type {};
 
 template<class T>
-struct is_body_writer<T, beast::detail::void_t<
+struct is_body_writer<T, boost::void_t<
     typename T::writer,
     typename T::writer::const_buffers_type,
         decltype(
@@ -117,7 +117,7 @@ template<class T, class = void>
 struct is_mutable_body_writer : std::false_type {};
 
 template<class T>
-struct is_mutable_body_writer<T, beast::detail::void_t<
+struct is_mutable_body_writer<T, boost::void_t<
     typename T::writer,
     typename T::writer::const_buffers_type,
         decltype(
@@ -172,7 +172,7 @@ template<class T, class = void>
 struct is_body_reader : std::false_type {};
 
 template<class T>
-struct is_body_reader<T, beast::detail::void_t<decltype(
+struct is_body_reader<T, boost::void_t<decltype(
     std::declval<typename T::reader&>().init(
         boost::optional<std::uint64_t>(),
         std::declval<error_code&>()),
