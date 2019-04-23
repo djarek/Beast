@@ -2,68 +2,51 @@ jobs:
   - job: 'Linux'
     pool:
       vmImage: 'ubuntu-16.04'
+    container:
+      image: djarek/boost-beast-ci:latest
+      options: --privileged
     strategy:
       matrix:
         GCC 8 C++17 Release:
           TOOLSET: gcc
           COMPILER: g++-8
-          PACKAGES: g++-8
           VARIANT: release
           CXXSTD: 17
         GCC 8 C++11 UBASAN:
           TOOLSET: gcc
           COMPILER: g++-8
-          PACKAGES: g++-8
-          VARIANT: release
+          VARIANT: beast_ubasan
           CXXSTD: 11
         GCC 7 C++14 Valgrind:
           TOOLSET: gcc
           COMPILER: g++-7
-          PACKAGES: g++-7 valgrind
           VARIANT: beast_valgrind
           CXXSTD: 14
         GCC Default C++11 Coverage:
           TOOLSET: gcc
           COMPILER: g++
-          PACKAGES: g++ lcov
           VARIANT: debug
           CXXSTD: 11
-        Clang 3.8 C++11 Debug:
+        Clang 7 C++11 Debug:
           TOOLSET: clang
-          COMPILER: clang++-3.8
-          PACKAGES: clang++-3.8
+          COMPILER: clang++-7
           VARIANT: debug
           CXXSTD: 11
-        Clang Default libc++ C++11 Debug:
+        Clang Default C++11 Debug:
           TOOLSET: clang
           COMPILER: clang++
-          PACKAGES: libc++-dev libc++abi-dev
           VARIANT: debug
           UBSAN_OPTIONS: print_stacktrace=1
           CXXSTD: 11
-          CXX_FLAGS: <cxxflags>-stdlib=libc++ <linkflags>-stdlib=libc++
-        Clang 8 C++14 Release:
+        Clang 8 libc++ C++14 UBASAN:
           TOOLSET: clang
-          COMPILER: clang-8
-          PACKAGES: clang-8
-          VARIANT: release
+          COMPILER: clang++-8
+          VARIANT: beast_ubasan
           UBSAN_OPTIONS: print_stacktrace=1
           CXXSTD: 14
-          LLVM_REPO: llvm-toolchain-xenial-8
+          CXX_FLAGS: <cxxflags>-stdlib=libc++ <linkflags>-stdlib=libc++
 
     steps:
-      - bash: |
-            set -e
-            uname -a
-            sudo -E apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
-            if test -n "${LLVM_REPO}" ; then
-              wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-              sudo -E apt-add-repository "deb http://apt.llvm.org/xenial/ ${LLVM_REPO} main"
-            fi
-            sudo -E apt-get update
-            sudo -E apt-get -yq --no-install-suggests --no-install-recommends install ${PACKAGES}
-            ln -s /usr/include/libcxxabi/__cxxabi_config.h /usr/include/c++/v1/__cxxabi_config.h || true
-        displayName: Install packages
       - bash: |
             set -e
             export BUILD_DIR=$(pwd)
@@ -82,8 +65,8 @@ jobs:
             export BEAST_RETRY=false
             export PATH=$PATH:"`pwd`"
             libs/beast/tools/build-and-test.sh
-
         displayName: Build & Run tests
+
   - job: 'macOS'
     pool:
       vmImage: 'macOS-10.13'

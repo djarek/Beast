@@ -44,7 +44,7 @@ variant beast_valgrind
 
 variant beast_ubasan
   : release
-  : <cxxflags>"-msse4.2 -funsigned-char -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize-recover=address,undefined -fsanitize-blacklist=libs/beast/tools/blacklist.supp"
+  : <cxxflags>"-msse4.2 -funsigned-char -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize-recover=address,undefined"
     <linkflags>"-fsanitize=address,undefined"
     <define>BOOST_USE_ASAN=1
   ;
