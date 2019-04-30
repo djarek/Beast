@@ -12,40 +12,66 @@ jobs:
           COMPILER: g++-8
           VARIANT: release
           CXXSTD: 17
+          B2_TARGETS: libs/beast/test//run-fat-tests libs/beast/example
         GCC 8 C++11 UBASAN:
           TOOLSET: gcc
           COMPILER: g++-8
-          VARIANT: beast_ubasan
+          VARIANT: debug
+          B2_FLAGS: address-sanitizer=no-recover undefined-sanitizer=no-recover
+          CXX_FLAGS: <cxxflags>"-msse4.2 -funsigned-char -fno-omit-frame-pointer"
           CXXSTD: 11
+          B2_TARGETS: libs/beast/test//run-fat-tests
+        GCC 8 C++11 TSAN:
+          TOOLSET: gcc
+          COMPILER: gcc++-8
+          VARIANT: release
+          B2_FLAGS: thread-sanitizer=no-recover
+          CXX_FLAGS: <cxxflags>"-msse4.2 -funsigned-char -fno-omit-frame-pointer"
+          CXXSTD: 11
+          B2_TARGETS: libs/beast/test//run-fat-tests
         GCC 7 C++14 Valgrind:
           TOOLSET: gcc
           COMPILER: g++-7
-          VARIANT: beast_valgrind
+          VARIANT: debug
+          B2_FLAGS: valgrind=on testing.launcher="valgrind --track-origins=yes --error-exitcode=1 --max-stackframe=16000000"
           CXXSTD: 14
+          B2_TARGETS: libs/beast/test//run-fat-tests
         GCC Default C++11 Coverage:
           TOOLSET: gcc
           COMPILER: g++
+          B2_FLAGS: coverage=all
           VARIANT: debug
           CXXSTD: 11
+          B2_TARGETS: libs/beast/test//run-fat-tests
         Clang 7 C++11 Debug:
           TOOLSET: clang
           COMPILER: clang++-7
           VARIANT: debug
           CXXSTD: 11
+          B2_TARGETS: libs/beast/test//run-fat-tests libs/beast/example
         Clang Default C++11 Debug:
           TOOLSET: clang
           COMPILER: clang++
           VARIANT: debug
-          UBSAN_OPTIONS: print_stacktrace=1
           CXXSTD: 11
+          B2_TARGETS: libs/beast/test//run-fat-tests libs/beast/example
         Clang 8 libc++ C++14 UBASAN:
           TOOLSET: clang
           COMPILER: clang++-8
-          VARIANT: beast_ubasan
+          VARIANT: release
+          B2_FLAGS: address-sanitizer=no-recover undefined-sanitizer=no-recover
           UBSAN_OPTIONS: print_stacktrace=1
           CXXSTD: 14
-          CXX_FLAGS: <cxxflags>-stdlib=libc++ <linkflags>-stdlib=libc++
-
+          CXX_FLAGS: <cxxflags>"-stdlib=libc++ -msse4.2 -funsigned-char -fno-omit-frame-pointer" <linkflags>-stdlib=libc++
+          B2_TARGETS: libs/beast/test//run-fat-tests
+        Clang 8 libc++ C++14 TSAN:
+          TOOLSET: clang
+          COMPILER: clang++-8
+          VARIANT: release
+          B2_FLAGS: thread-sanitizer=no-recover
+          CXXSTD: 11
+          CXX_FLAGS: <cxxflags>"-stdlib=libc++ -msse4.2 -funsigned-char -fno-omit-frame-pointer" <linkflags>-stdlib=libc++
+          B2_TARGETS: libs/beast/test//run-fat-tests libs/beast/example
     steps:
       - bash: |
             set -e
@@ -64,7 +90,13 @@ jobs:
             export BOOST_ROOT=$(pwd)
             export BEAST_RETRY=false
             export PATH=$PATH:"`pwd`"
-            libs/beast/tools/build-and-test.sh
+            ./b2 -j2 \
+              --debug-configuration \
+              cxxstd=$CXXSTD \
+              toolset=$TOOLSET \
+              variant=$VARIANT \
+              $B2_FLAGS \
+              $B2_TARGETS
         displayName: Build & Run tests
 
   - job: 'macOS'
