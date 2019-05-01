@@ -94,7 +94,7 @@ jobs:
             cd ..
             $BUILD_DIR/tools/get-boost.sh develop $BUILD_DIR
             cd boost-root
-            ./bootstrap.sh
+            ./bootstrap.sh || cat bootstrap.log
             cp libs/beast/tools/user-config.jam ~/user-config.jam
             echo "using $TOOLSET : : $(which $COMPILER) : $CXX_FLAGS ;" >> ~/user-config.jam
             echo "project : requirements $B2_FLAGS ;" >> ~/user-config.jam
