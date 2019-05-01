@@ -9,14 +9,14 @@ jobs:
       matrix:
         GCC 8 C++17 Release:
           TOOLSET: gcc
-          COMPILER: g++-8
+          CXX: g++-8
           PACKAGES: g++-8
           VARIANT: release
           CXXSTD: 17
           B2_TARGETS: libs/beast/test//run-fat-tests libs/beast/example
         GCC 8 C++11 UBASAN:
           TOOLSET: gcc
-          COMPILER: g++-8
+          CXX: g++-8
           PACKAGES: g++-8
           VARIANT: debug
           B2_FLAGS: <address-sanitizer>norecover <undefined-sanitizer>norecover
@@ -27,7 +27,7 @@ jobs:
           B2_TARGETS: libs/beast/test//run-fat-tests
         GCC 8 C++11 TSAN:
           TOOLSET: gcc
-          COMPILER: g++-8
+          CXX: g++-8
           PACKAGES: g++-8
           VARIANT: release
           B2_FLAGS: <thread-sanitizer>norecover
@@ -36,7 +36,7 @@ jobs:
           B2_TARGETS: libs/beast/test//run-fat-tests
         GCC 7 C++14 Valgrind:
           TOOLSET: gcc
-          COMPILER: g++-7
+          CXX: g++-7
           PACKAGES: g++-7
           VARIANT: debug
           B2_FLAGS: <valgrind>on <testing.launcher>"valgrind --track-origins=yes --error-exitcode=1 --max-stackframe=16000000"
@@ -44,7 +44,7 @@ jobs:
           B2_TARGETS: libs/beast/test//run-fat-tests
         GCC Default C++11 Coverage:
           TOOLSET: gcc
-          COMPILER: g++
+          CXX: g++
           PACKAGES: g++
           B2_FLAGS: <coverage>all
           VARIANT: debug
@@ -52,21 +52,21 @@ jobs:
           B2_TARGETS: libs/beast/test//run-fat-tests
         Clang 7 C++11 Debug:
           TOOLSET: clang
-          COMPILER: clang++-7
+          CXX: clang++-7
           PACKAGES: clang-7
           VARIANT: debug
           CXXSTD: 11
           B2_TARGETS: libs/beast/test//run-fat-tests libs/beast/example
         Clang Default C++11 Debug:
           TOOLSET: clang
-          COMPILER: clang++
+          CXX: clang++
           PACKAGES: clang
           VARIANT: debug
           CXXSTD: 11
           B2_TARGETS: libs/beast/test//run-fat-tests libs/beast/example
         Clang 8 libc++ C++14 UBASAN:
           TOOLSET: clang
-          COMPILER: clang++-8
+          CXX: clang++-8
           PACKAGES: clang-8 libc++-8-dev libc++abi-8-dev
           VARIANT: release
           B2_FLAGS: <address-sanitizer>norecover <undefined-sanitizer>norecover
@@ -76,7 +76,7 @@ jobs:
           B2_TARGETS: libs/beast/test//run-fat-tests
         Clang 8 libc++ C++14 TSAN:
           TOOLSET: clang
-          COMPILER: clang++-8
+          CXX: clang++-8
           PACKAGES: clang-8 libc++-8-dev libc++abi-8-dev
           VARIANT: release
           B2_FLAGS: <thread-sanitizer>norecover
@@ -96,7 +96,7 @@ jobs:
             cd boost-root
             ./bootstrap.sh || cat bootstrap.log
             cp libs/beast/tools/user-config.jam ~/user-config.jam
-            echo "using $TOOLSET : : $(which $COMPILER) : $CXX_FLAGS ;" >> ~/user-config.jam
+            echo "using $TOOLSET : : $(which $CXX) : $CXX_FLAGS ;" >> ~/user-config.jam
             echo "project : requirements $B2_FLAGS ;" >> ~/user-config.jam
         displayName: Get Boost
       - bash: |
