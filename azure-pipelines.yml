@@ -1,3 +1,6 @@
+variables:
+  GIT_BRANCH: $(Build.SourceBranch)
+
 jobs:
   - job: 'Linux'
     pool:
@@ -12,6 +15,7 @@ jobs:
           CXX: g++-8
           PACKAGES: g++-8
           VARIANT: release
+          B2_FLAGS: <define>BOOST_BEAST_USE_STD_STRING_VIEW
           CXXSTD: 17
           B2_TARGETS: libs/beast/test//run-fat-tests libs/beast/example
         GCC 8 C++11 UBASAN:
@@ -50,12 +54,34 @@ jobs:
           VARIANT: debug
           CXXSTD: 11
           B2_TARGETS: libs/beast/test//run-fat-tests
+        Clang 6.0 C++11 Debug:
+          TOOLSET: clang
+          CXX: clang++-6.0
+          PACKAGES: clang-6.0
+          VARIANT: debug
+          CXXSTD: 11
+          B2_TARGETS: libs/beast/test//run-fat-tests libs/beast/example
+        Clang 7 C++14 Valgrind:
+          TOOLSET: clang
+          CXX: clang++-7
+          PACKAGES: clang-7
+          VARIANT: release
+          B2_FLAGS: <valgrind>on <testing.launcher>"valgrind --track-origins=yes --error-exitcode=1 --max-stackframe=16000000"
+          CXXSTD: 14
+          B2_TARGETS: libs/beast/test//run-fat-tests
         Clang 7 C++11 Debug:
           TOOLSET: clang
           CXX: clang++-7
           PACKAGES: clang-7
           VARIANT: debug
           CXXSTD: 11
+          B2_TARGETS: libs/beast/test//run-fat-tests libs/beast/example
+        Clang 7 C++17 Release:
+          TOOLSET: clang
+          CXX: clang++-7
+          PACKAGES: clang-7
+          VARIANT: release
+          CXXSTD: 17
           B2_TARGETS: libs/beast/test//run-fat-tests libs/beast/example
         Clang Default C++11 Debug:
           TOOLSET: clang
@@ -89,6 +115,7 @@ jobs:
             sudo apt update && sudo apt install -y $PACKAGES
         displayName: Get dependencies
       - bash: |
+            echo "GIT_BRANCH: $GIT_BRANCH"
             set -e
             export BUILD_DIR=$(pwd)
             cd ..
@@ -166,6 +193,7 @@ jobs:
         MSVC14.1 C++17 x64:
           VM_IMAGE: 'vs2017-win2016'
           TOOLSET: msvc-14.1
+          B2_FLAGS: define=BOOST_BEAST_USE_STD_STRING_VIEW
           CXXSTD: 17
           ADDRMODEL: 64
         MSVC14.0 C++11 x64:
@@ -195,19 +223,21 @@ jobs:
           echo "VCPKG_ROOT: $VCPKG_INSTALLATION_ROOT"
           export OPENSSL_ROOT="$VCPKG_INSTALLATION_ROOT""/installed/x$ADDRMODEL""-windows"
           cd ../boost-root
-          ./b2 -j2 \
+          ./b2 -d2 -j2 \
             --debug-configuration \
             variant=debug \
             cxxstd=$CXXSTD \
             address-model=$ADDRMODEL \
             toolset=$TOOLSET \
+            $B2_FLAGS \
             libs/beast/example
-          ./b2 -j2 \
+          ./b2 -d2 -j2 \
             --debug-configuration \
             variant=debug,release \
             cxxstd=$CXXSTD \
             address-model=$ADDRMODEL \
             toolset=$TOOLSET \
+            $B2_FLAGS \
             --verbose-test \
             libs/beast/test//run-fat-tests
         displayName: Build & Run tests
