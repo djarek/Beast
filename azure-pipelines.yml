@@ -76,12 +76,12 @@ jobs:
           VARIANT: debug
           CXXSTD: 11
           B2_TARGETS: libs/beast/test//run-fat-tests libs/beast/example
-        Clang 7 C++17 Release:
+        Clang 7 C++14 Release:
           TOOLSET: clang
           CXX: clang++-7
           PACKAGES: clang-7
           VARIANT: release
-          CXXSTD: 17
+          CXXSTD: 14
           B2_TARGETS: libs/beast/test//run-fat-tests libs/beast/example
         Clang Default C++11 Debug:
           TOOLSET: clang
@@ -115,11 +115,10 @@ jobs:
             sudo apt update && sudo apt install -y $PACKAGES
         displayName: Get dependencies
       - bash: |
-            echo "GIT_BRANCH: $GIT_BRANCH"
             set -e
             export BUILD_DIR=$(pwd)
             cd ..
-            $BUILD_DIR/tools/get-boost.sh develop $BUILD_DIR
+            $BUILD_DIR/tools/get-boost.sh $GIT_BRANCH $BUILD_DIR
             cd boost-root
             ./bootstrap.sh || cat bootstrap.log
             cp libs/beast/tools/user-config.jam ~/user-config.jam
@@ -163,7 +162,7 @@ jobs:
           which clang++
           export BUILD_DIR=$(pwd)
           cd ..
-          $BUILD_DIR/tools/get-boost.sh develop $BUILD_DIR
+          $BUILD_DIR/tools/get-boost.sh $GIT_BRANCH $BUILD_DIR
           cd boost-root
           ./bootstrap.sh || cat bootstrap.log
           cp libs/beast/tools/user-config.jam ~/user-config.jam
@@ -212,7 +211,7 @@ jobs:
           set -e
           export BUILD_DIR=$(pwd)
           cd ..
-          $BUILD_DIR/tools/get-boost.sh develop $BUILD_DIR
+          $BUILD_DIR/tools/get-boost.sh $GIT_BRANCH $BUILD_DIR
           cd boost-root
           ./bootstrap.sh
           cp libs/beast/tools/user-config.jam ~/user-config.jam
