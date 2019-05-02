@@ -1,5 +1,5 @@
 variables:
-  GIT_BRANCH: $(Build.SourceBranchName)
+  GIT_BRANCH: $(Build.SourceBranch)
 
 jobs:
   - job: 'Linux'
