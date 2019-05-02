@@ -1,3 +1,6 @@
+variables:
+  GIT_BRANCH: $(Build.SourceBranchName)
+
 jobs:
   - job: 'Linux'
     pool:
@@ -12,7 +15,7 @@ jobs:
           CXX: g++-8
           PACKAGES: g++-8
           VARIANT: release
-          B2_FLAGS: define=BOOST_BEAST_USE_STD_STRING_VIEW
+          B2_FLAGS: <define>BOOST_BEAST_USE_STD_STRING_VIEW
           CXXSTD: 17
           B2_TARGETS: libs/beast/test//run-fat-tests libs/beast/example
         GCC 8 C++11 UBASAN:
@@ -112,6 +115,7 @@ jobs:
             sudo apt update && sudo apt install -y $PACKAGES
         displayName: Get dependencies
       - bash: |
+            echo "GIT_BRANCH: $GIT_BRANCH"
             set -e
             export BUILD_DIR=$(pwd)
             cd ..
