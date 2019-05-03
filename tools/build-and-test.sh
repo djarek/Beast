@@ -148,6 +148,7 @@ if [[ $VARIANT == "beast_coverage" ]]; then
   lcov -a baseline.info -a testrun-all.info -o lcov-diff.info > /dev/null
   lcov -e "lcov-diff.info" "$INC_DIR/*" -o lcov.info > /dev/null
   lcov --remove "lcov.info" "$INC_DIR/_experimental/*" -o lcov.info > /dev/null
+  lcov --list lcov.info
   ~/.local/bin/codecov -X gcov -f lcov.info
   find "$BOOST_ROOT" -name "*.gcda" | xargs rm -f
 

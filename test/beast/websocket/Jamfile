@@ -1,3 +1,4 @@
+
 #
 # Copyright (c) 2016-2017 Vinnie Falco (vinnie dot falco at gmail dot com)
 #
@@ -46,7 +47,7 @@ for local f in $(SOURCES)
 alias run-tests : $(RUN_TESTS) ;
 
 exe fat-tests
-    : 
+    :
     $(SOURCES)
     /boost/beast//lib-asio-ssl
     /boost/beast/test//lib-test
