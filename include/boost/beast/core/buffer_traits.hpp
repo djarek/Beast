@@ -16,6 +16,7 @@
 #include <boost/asio/buffer.hpp>
 #include <boost/config/workaround.hpp>
 #include <boost/mp11/function.hpp>
+#include <boost/assert.hpp>
 #include <type_traits>
 
 namespace boost {
@@ -157,6 +158,78 @@ buffer_bytes(BufferSequence const& buffers);
 #else
 BOOST_BEAST_INLINE_VARIABLE(buffer_bytes, detail::buffer_bytes_impl)
 #endif
+
+class dynamic_preparation
+{
+    std::size_t original_size_ = 0;
+    std::size_t grow_by_ = 0;
+
+public:
+    template<class DynamicBuffer>
+    static
+    std::size_t
+    suggested_growth(
+        DynamicBuffer const& buffer,
+        std::size_t upper_limit = 1536,
+        std::size_t lower_limit = 512) noexcept
+    {
+        return std::min<std::size_t>(
+            std::min<std::size_t>(
+                upper_limit,
+                buffer.max_size() - buffer.size()),
+            std::max<std::size_t>(
+                lower_limit,
+                buffer.capacity() - buffer.size()));
+    }
+
+    dynamic_preparation() = default;
+
+    template<class DynamicBuffer>
+    explicit
+    dynamic_preparation(
+        DynamicBuffer const& buffer) noexcept
+        : original_size_(buffer.size())
+    {
+    }
+
+    std::size_t
+    size() const noexcept
+    {
+        return grow_by_;
+    }
+
+    template<class DynamicBuffer>
+    void
+    grow(
+        DynamicBuffer& buffer,
+        std::size_t upper_limit = 1536,
+        std::size_t lower_limit = 512)
+    {
+        original_size_ = buffer.size();
+        grow_by_ =  suggested_growth(
+            buffer, upper_limit, lower_limit);
+        buffer.grow(grow_by_);
+    }
+
+    template<class DynamicBuffer>
+    typename DynamicBuffer::mutable_buffers_type
+    data(DynamicBuffer& buffer) const
+    {
+        return buffer.data(original_size_, grow_by_);
+    }
+
+    template<class DynamicBuffer>
+    void
+    commit(
+        DynamicBuffer& buffer,
+        std::size_t bytes_transferred)
+    {
+        BOOST_ASSERT(bytes_transferred <= grow_by_);
+        buffer.shrink(grow_by_ - bytes_transferred);
+        original_size_ = buffer.size();
+        grow_by_ = 0;
+    }
+};
 
 } // beast
 } // boost
