@@ -69,8 +69,8 @@ jobs:
           TOOLSET: gcc
           CXX: g++-7
           PACKAGES: g++-7
-          VARIANT: debug
-          B2_FLAGS: <valgrind>on <testing.launcher>"valgrind --track-origins=yes --error-exitcode=1 --max-stackframe=16000000"
+          VARIANT: release
+          B2_FLAGS: <define>BOOST_BEAST_TEST_STATIC_PRNG_SEED <valgrind>on <testing.launcher>"valgrind --track-origins=yes --error-exitcode=1 --max-stackframe=16000000 --suppressions=libs/beast/tools/valgrind.supp"
           CXXSTD: 14
           B2_TARGETS: libs/beast/test//run-fat-tests
         GCC Default C++11 Release:
@@ -92,7 +92,7 @@ jobs:
           CXX: clang++-7
           PACKAGES: clang-7 libc++-7-dev libc++abi-7-dev
           VARIANT: release
-          B2_FLAGS: <valgrind>on <testing.launcher>"valgrind --track-origins=yes --error-exitcode=1 --max-stackframe=16000000"
+          B2_FLAGS: <valgrind>on <testing.launcher>"valgrind --track-origins=yes --error-exitcode=1 --max-stackframe=16000000 --suppressions=libs/beast/tools/valgrind.supp"
           CXXSTD: 14
           CXX_FLAGS: <cxxflags>"-stdlib=libc++" <linkflags>"-stdlib=libc++"
           B2_TARGETS: libs/beast/test//run-fat-tests
@@ -135,7 +135,7 @@ jobs:
           B2_FLAGS: <thread-sanitizer>norecover
           CXXSTD: 11
           CXX_FLAGS: <cxxflags>"-stdlib=libc++ -msse4.2 -funsigned-char -fno-omit-frame-pointer" <linkflags>-stdlib=libc++
-          B2_TARGETS: libs/beast/test//run-fat-tests libs/beast/example
+          B2_TARGETS: libs/beast/test//run-fat-tests
     steps:
       - bash: |
             sudo apt update && sudo apt install -y $PACKAGES
