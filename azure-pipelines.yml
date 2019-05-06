@@ -87,13 +87,14 @@ jobs:
           VARIANT: debug
           CXXSTD: 11
           B2_TARGETS: libs/beast/test//run-fat-tests libs/beast/example
-        Clang 7 C++14 Valgrind:
+        Clang 7 libc++ C++14 Valgrind:
           TOOLSET: clang
           CXX: clang++-7
-          PACKAGES: clang-7
+          PACKAGES: clang-7 libc++-7-dev libc++abi-7-dev
           VARIANT: release
           B2_FLAGS: <valgrind>on <testing.launcher>"valgrind --track-origins=yes --error-exitcode=1 --max-stackframe=16000000"
           CXXSTD: 14
+          CXX_FLAGS: <cxxflags>"-stdlib=libc++" <linkflags>"-stdlib=libc++"
           B2_TARGETS: libs/beast/test//run-fat-tests
         Clang 7 C++11 Debug:
           TOOLSET: clang
