@@ -457,120 +457,6 @@ public:
 //------------------------------------------------------------------------------
 
 template<class Allocator>
-class basic_multi_buffer<Allocator>::mutable_buffers_type
-{
-    basic_multi_buffer const* b_;
-
-    friend class basic_multi_buffer;
-
-    explicit
-    mutable_buffers_type(
-        basic_multi_buffer const& b) noexcept
-        : b_(&b)
-    {
-    }
-
-public:
-    using value_type = net::mutable_buffer;
-
-    class const_iterator;
-
-    mutable_buffers_type() = delete;
-    mutable_buffers_type(mutable_buffers_type const&) = default;
-    mutable_buffers_type& operator=(mutable_buffers_type const&) = default;
-
-    const_iterator begin() const noexcept;
-    const_iterator end() const noexcept;
-};
-
-//------------------------------------------------------------------------------
-
-template<class Allocator>
-class basic_multi_buffer<Allocator>::mutable_buffers_type::const_iterator
-{
-    basic_multi_buffer const* b_ = nullptr;
-    typename list_type::const_iterator it_;
-
-public:
-    using value_type = typename
-        mutable_buffers_type::value_type;
-    using pointer = value_type const*;
-    using reference = value_type;
-    using difference_type = std::ptrdiff_t;
-    using iterator_category =
-        std::bidirectional_iterator_tag;
-
-    const_iterator() = default;
-    const_iterator(const_iterator const& other) = default;
-    const_iterator& operator=(const_iterator const& other) = default;
-
-    const_iterator(
-        basic_multi_buffer const& b,
-        typename list_type::const_iterator const& it) noexcept
-        : b_(&b)
-        , it_(it)
-    {
-    }
-
-    bool
-    operator==(const_iterator const& other) const noexcept
-    {
-        return b_ == other.b_ && it_ == other.it_;
-    }
-
-    bool
-    operator!=(const_iterator const& other) const noexcept
-    {
-        return !(*this == other);
-    }
-
-    reference
-    operator*() const noexcept
-    {
-        auto const& e = *it_;
-        return value_type{e.data(),
-            &e == &*std::prev(b_->list_.end()) ?
-                b_->out_end_ : e.size()} +
-                   (&e == &*b_->out_ ? b_->out_pos_ : 0);
-    }
-
-    pointer
-    operator->() const = delete;
-
-    const_iterator&
-    operator++() noexcept
-    {
-        ++it_;
-        return *this;
-    }
-
-    const_iterator
-    operator++(int) noexcept
-    {
-        auto temp = *this;
-        ++(*this);
-        return temp;
-    }
-
-    const_iterator&
-    operator--() noexcept
-    {
-        --it_;
-        return *this;
-    }
-
-    const_iterator
-    operator--(int) noexcept
-    {
-        auto temp = *this;
-        --(*this);
-        return temp;
-    }
-};
-
-//------------------------------------------------------------------------------
-
-template<class Allocator>
 template<bool isMutable>
 auto
 basic_multi_buffer<Allocator>::
@@ -590,26 +476,6 @@ end() const noexcept ->
     const_iterator
 {
     return {*this, true};
-}
-
-template<class Allocator>
-auto
-basic_multi_buffer<Allocator>::
-mutable_buffers_type::
-begin() const noexcept ->
-    const_iterator
-{
-    return const_iterator{*b_, b_->out_};
-}
-
-template<class Allocator>
-auto
-basic_multi_buffer<Allocator>::
-mutable_buffers_type::
-end() const noexcept ->
-    const_iterator
-{
-    return const_iterator{*b_, b_->list_.end()};
 }
 
 //------------------------------------------------------------------------------
@@ -833,7 +699,7 @@ basic_multi_buffer<Allocator>::
 data() noexcept ->
     mutable_data_type
 {
-    return mutable_data_type(*this);
+    return mutable_buffers_type(*this);
 }
 
 template<class Allocator>
@@ -1014,6 +880,10 @@ prepare(std::size_t n) ->
     if(in_size_ > max_ || n > (max_ - in_size_))
         BOOST_THROW_EXCEPTION(std::length_error{
             "basic_multi_buffer too long"});
+
+    // VFALCO saving this to use later
+    auto const out_size = n;
+
     list_type reuse;
     std::size_t total = in_size_;
     // put all empty buffers on reuse list
@@ -1090,7 +960,8 @@ prepare(std::size_t n) ->
         #endif
         }
     }
-    return mutable_buffers_type(*this);
+    return mutable_buffers_type(
+        *this, in_size_, out_size);
 }
 
 template<class Allocator>

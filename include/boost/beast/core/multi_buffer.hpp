@@ -422,7 +422,7 @@ public:
 #else
     using const_buffers_type = readable_bytes<false>;
     using mutable_data_type = readable_bytes<true>;
-    class mutable_buffers_type;
+    using mutable_buffers_type = readable_bytes<true>;
 #endif
 
 #if 0
