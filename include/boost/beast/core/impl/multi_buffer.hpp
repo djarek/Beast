@@ -135,19 +135,48 @@ template<bool isMutable>
 class basic_multi_buffer<Allocator>::readable_bytes
 {
     typename list_type::const_iterator begin_;
+    typename list_type::const_iterator last_;
     typename list_type::const_iterator end_;
     std::size_t begin_pos_;     // offset in first buffer
     std::size_t last_pos_;      // offset in last buffer
     std::size_t size_;          // total bytes in sequence
-    int last_;                  // relative index of last buffer
 
     friend class basic_multi_buffer;
+
+    struct output_tag_t {};
 
     explicit
     readable_bytes(
         basic_multi_buffer const& b) noexcept
+        : begin_(b.list_.begin())
+        , end_(b.out_)
+        , size_(b.in_size_)
     {
-        construct(b, 0, b.in_size_);
+        if (begin_ != end_)
+            last_ = std::prev(end_);
+        else if(end_ != b.list_.end())
+            last_ = end_++;
+        else
+            last_ = end_;
+
+        begin_pos_ = b.in_pos_;
+        last_pos_ = begin_pos_ + b.in_size_;
+    }
+
+    explicit
+    readable_bytes(
+        basic_multi_buffer const& b, output_tag_t) noexcept
+        : begin_(b.out_)
+        , end_(b.list_.end())
+        , size_(b.out_size_)
+    {
+        if (begin_ != end_)
+            last_ = std::prev(end_);
+        else
+            last_ = end_;
+
+        begin_pos_ = b.out_pos_;
+        last_pos_ = b.out_end_;
     }
 
     readable_bytes(
@@ -164,95 +193,82 @@ class basic_multi_buffer<Allocator>::readable_bytes
         std::size_t pos,
         std::size_t n) noexcept
     {
-        auto it = b.list_.begin();
-
         // handle empty list or large offset
         if( b.list_.empty() ||
-            pos >= b.in_size_ ||
+            pos >= b.in_size_ + b.out_size_ ||
             n == 0)
         {
-            begin_ = it;
-            end_ = it;
+            begin_ = b.list_.begin();
+            last_ = b.list_.begin();
+            end_ = b.list_.begin();
             begin_pos_ = 0;
             last_pos_ = 0;
             size_ = 0;
-            last_ = 0;
             return;
         }
+
+        n = std::min(n, b.in_size_ + b.out_size_ - pos);
 
         // adjust pos for in_pos_
         pos += b.in_pos_; // (can't overflow)
 
         // advance to pos
-        for(;;)
-        {
-            BOOST_ASSERT(it != b.list_.end());
-            if(it->size() > pos)
-                break;
-            pos -= it->size();
-            BOOST_ASSERT(it != b.out_);
-            ++it;
-        }
-        begin_ = it;
+
+        std::size_t begin_size = 0;
+        begin_ = std::find_if(b.list_.begin(), b.list_.end(),
+            [&pos, &begin_size](element const& e)
+            {
+                if (e.size() > pos)
+                {
+                    begin_size = e.size();
+                    return true;
+                }
+                else
+                {
+                    pos -= e.size();
+                    return false;
+                }
+            });
         begin_pos_ = pos;
-
-        // special case
-        if(it == b.out_)
+        if (begin_size - begin_pos_ >= n)
         {
-            if( n > b.out_pos_ - pos)
-                n = b.out_pos_ - pos;
-            end_ = ++it;
-            last_pos_ = pos + n;
             size_ = n;
-            last_ = 0;
-            return;
-        }
-        else if(n < it->size() - pos)
-        {
-            end_ = ++it;
-            last_pos_ = pos + n;
-            size_ = n;
-            last_ = 0;
+            last_ = begin_;
+            last_pos_ = begin_pos_ + n;
+            if (last_ != b.list_.end())
+            {
+                end_ = std::next(last_);
+            }
             return;
         }
 
-        size_ = it->size() - pos;
-        n -= size_;
-
-        // advance n bytes
-        int last = 0;
-        for(;;)
+        size_ = 0;
+        last_pos_ = 0;
+        last_ = std::find_if(begin_, b.list_.end(),
+            [&n, this, pos](element const& e) mutable
+            {
+                if (n > e.size() - pos)
+                {
+                    n -= (e.size() - pos);
+                    size_ += (e.size() - pos);
+                    pos = 0;
+                    return false;
+                }
+                else
+                {
+                    size_ += n;
+                    last_pos_ = n;
+                    return true;
+                }
+            });
+        if (last_ != b.list_.end())
         {
-            ++it;
-            ++last;
-            if(n == 0)
-                break;
-            if(it == b.list_.end())
-            {
-                n = 0;
-                break;
-            }
-            if(it == b.out_)
-            {
-                BOOST_ASSERT(
-                    it != b.list_.begin());
-                if(n > b.out_pos_)
-                    n = b.out_pos_;
-                ++it;
-                break;
-            }
-            if(n < it->size())
-            {
-                ++it;
-                break;
-            }
-            n -= it->size();
-            size_ += it->size();
+            end_ = std::next(last_);
         }
-        end_ = it;
-        last_pos_ = n;
-        size_ += n;
-        last_ = last;
+        else
+        {
+            end_ = last_;
+        }
     }
 
 public:
@@ -269,11 +285,11 @@ public:
 #if BOOST_WORKAROUND(BOOST_MSVC, < 1910)
     readable_bytes(readable_bytes const& other)
         : begin_(other.begin_)
+        , last_(other.last_)
         , end_(other.end_)
         , begin_pos_(other.begin_pos_)
         , last_pos_(other.last_pos_)
         , size_(other.size_)
-        , last_(other.last_)
     {
     }
 
@@ -298,11 +314,11 @@ public:
     readable_bytes(
         readable_bytes<true> const& other) noexcept
         : begin_(other.begin_)
+        , last_(other.last_)
         , end_(other.end_)
         , begin_pos_(other.begin_pos_)
         , last_pos_(other.last_pos_)
         , size_(other.size_)
-        , last_(other.last_)
     {
     }
 
@@ -346,7 +362,6 @@ class
 {
     typename list_type::const_iterator it_ = {};
     readable_bytes const* rb_ = nullptr;
-    int n_ = 0;
 
     friend class readable_bytes<isMutable>;
 
@@ -356,19 +371,6 @@ class
         : it_(at_end ? rb.end_ : rb.begin_)
         , rb_(&rb)
     {
-        if(at_end)
-        {
-            if(rb_->last_pos_ != 0)
-                n_ = rb_->last_ + 1;
-            else if(rb_->size_ != 0)
-                n_ = rb_->last_;
-            else
-                n_ = 0;
-        }
-        else
-        {
-            n_ = 0;
-        }
     }
 
 public:
@@ -389,7 +391,7 @@ public:
     bool
     operator==(const_iterator const& other) const noexcept
     {
-        return 
+        return
             rb_ == other.rb_ &&
             it_ == other.it_;
     }
@@ -403,18 +405,25 @@ public:
     reference
     operator*() const noexcept
     {
+        BOOST_ASSERT(rb_ != nullptr);
+        BOOST_ASSERT(it_ != rb_->end_);
         auto const& e = *it_;
-        if(n_ != rb_->last_)
+        auto* begin = (char*)e.data();
+        if (it_ == rb_->begin_)
         {
-            if(n_ != 0)
-                return value_type(e.data(), e.size());
-            return value_type(
-                e.data(), e.size()) + rb_->begin_pos_;
+            BOOST_ASSERT(rb_->begin_pos_ < e.size());
+            begin += rb_->begin_pos_;
         }
-        if(n_ != 0)
-            return value_type(e.data(), rb_->last_pos_);
-        return value_type(
-            e.data(), rb_->last_pos_) + rb_->begin_pos_;
+        auto* end = (char*)e.data();
+        if (it_ == rb_->last_)
+        {
+            BOOST_ASSERT(it_ != rb_->end_ || rb_->last_pos_ == 0);
+            end += rb_->last_pos_;
+            BOOST_ASSERT(rb_->last_pos_ <= e.size());
+        }
+        else
+            end += e.size();
+        return value_type(begin, end - begin);
     }
 
     pointer
@@ -424,7 +433,6 @@ public:
     operator++() noexcept
     {
         ++it_;
-        ++n_;
         return *this;
     }
 
@@ -439,9 +447,9 @@ public:
     const_iterator&
     operator--() noexcept
     {
-        BOOST_ASSERT(n_ > 0);
+        BOOST_ASSERT(rb_ != nullptr);
+        BOOST_ASSERT(it_ != rb_->begin_);
         --it_;
-        --n_;
         return *this;
     }
 
@@ -550,7 +558,7 @@ template<class Allocator>
 basic_multi_buffer<Allocator>::
 basic_multi_buffer(
     basic_multi_buffer&& other,
-    Allocator const& alloc) 
+    Allocator const& alloc)
     : boost::empty_value<
         base_alloc_type>(boost::empty_init_t(), alloc)
     , max_(other.max_)
@@ -880,10 +888,6 @@ prepare(std::size_t n) ->
     if(in_size_ > max_ || n > (max_ - in_size_))
         BOOST_THROW_EXCEPTION(std::length_error{
             "basic_multi_buffer too long"});
-
-    // VFALCO saving this to use later
-    auto const out_size = n;
-
     list_type reuse;
     std::size_t total = in_size_;
     // put all empty buffers on reuse list
@@ -902,11 +906,13 @@ prepare(std::size_t n) ->
         auto const avail = out_->size() - out_pos_;
         if(n > avail)
         {
+            out_size_ = avail;
             out_end_ = out_->size();
             n -= avail;
         }
         else
         {
+            out_size_ = n;
             out_end_ = out_pos_ + n;
             n = 0;
         }
@@ -921,6 +927,7 @@ prepare(std::size_t n) ->
         reuse.erase(reuse.iterator_to(e));
         list_.push_back(e);
         total += e.size();
+        out_size_ += e.size();
         if(n > e.size())
         {
             out_end_ = e.size();
@@ -951,6 +958,7 @@ prepare(std::size_t n) ->
                         512,
                         n}));
             auto& e = alloc(size);
+            out_size_ += n;
             list_.push_back(e);
             if(out_ == list_.end())
                 out_ = list_.iterator_to(e);
@@ -961,7 +969,7 @@ prepare(std::size_t n) ->
         }
     }
     return mutable_buffers_type(
-        *this, in_size_, out_size);
+        *this, typename mutable_buffers_type::output_tag_t{});
 }
 
 template<class Allocator>
@@ -975,6 +983,7 @@ commit(std::size_t n) noexcept
         return;
     auto const back =
         list_.iterator_to(list_.back());
+    out_size_ = 0;
     while(out_ != back)
     {
         auto const avail =

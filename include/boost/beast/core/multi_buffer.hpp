@@ -89,6 +89,7 @@ class basic_multi_buffer
     list_type list_;            // list of allocated buffers
     iter out_;                  // element that contains out_pos_
     std::size_t in_size_ = 0;   // size of the input sequence
+    std::size_t out_size_ = 0;   // size of the output sequence
     std::size_t in_pos_ = 0;    // input offset in list_.front()
     std::size_t out_pos_ = 0;   // output offset in *out_
     std::size_t out_end_ = 0;   // output end offset in list_.back()
@@ -504,7 +505,7 @@ public:
     data() noexcept;
 
     /** Returns a mutable buffer sequence representing writable bytes.
-    
+
         Returns a mutable buffer sequence representing the writable
         bytes containing exactly `n` bytes of storage. Memory may be
         reallocated as needed.

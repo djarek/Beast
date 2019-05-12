@@ -46,7 +46,7 @@ public:
         b_[0] = {data, size/6};
         data += b_[0].size();
         size -= b_[0].size();
-            
+
         b_[1] = {data, 2*size/5};
         data += b_[1].size();
         size -= b_[1].size();
