@@ -24,12 +24,7 @@ lib mswsock ; # NT
 lib ipv6 ; # HPUX
 lib network ; # HAIKU
 
-lib ssl ;
-lib crypto ;
-lib crypt32 ;
-
-lib ssl : : <target-os>windows <name>ssleay32 ;
-lib crypto : : <target-os>windows <name>libeay32 ;
+#using openssl ;
 
 variant beast_coverage
   : debug
@@ -110,8 +105,8 @@ lib lib-asio-ssl
     : requirements
         <link>static
         $(defines)
-        [ ac.check-library /boost/beast//ssl : <library>/boost/beast//ssl/<link>shared : <build>no ]
-        [ ac.check-library /boost/beast//crypto : <library>/boost/beast//crypto/<link>shared : <build>no ]
+        [ ac.check-library /openssl//ssl : <library>/openssl//ssl/<link>shared : <build>no ]
+        [ ac.check-library /openssl//crypto : <library>/openssl//crypto/<link>shared : <build>no ]
     : usage-requirements
         $(defines)
     ;

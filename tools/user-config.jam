@@ -2,12 +2,12 @@
 
 import os ;
 
-local OPENSSL_ROOT = [ os.environ OPENSSL_ROOT ] ;
+local OPENSSL_ROOT = [ os.environ OPENSSL_ROOTT ] ;
 
-project
-  : requirements
-    <include>$(OPENSSL_ROOT)/include
-    <variant>debug:<library-path>$(OPENSSL_ROOT)/lib
-    <target-os>windows<variant>debug:<library-path>$(OPENSSL_ROOT)/debug/lib
-    <variant>release:<library-path>$(OPENSSL_ROOT)/lib
-  ;
+using openssl
+    :
+    :
+        <target-os>windows<variant>release:<search>"$(OPENSSL_ROOT)/lib"
+        <target-os>windows<variant>debug:<search>"$(OPENSSL_ROOT)/debug/lib"
+        <target-os>windows:<include>$(OPENSSL_ROOT)/include
+    ;
