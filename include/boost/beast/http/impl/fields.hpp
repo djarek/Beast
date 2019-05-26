@@ -219,11 +219,13 @@ writer(basic_fields const& f,
     buf_[9] = '\r';
     buf_[10]= '\n';
 
+    auto target_or_reason_sv = f_.target_or_reason_.view();
+
     view_.emplace(
         net::const_buffer{sv.data(), sv.size()},
         net::const_buffer{
-            f_.target_or_reason_.data(),
-            f_.target_or_reason_.size()},
+            target_or_reason_sv.data(),
+            target_or_reason_sv.size()},
         net::const_buffer{buf_, 11},
         field_range(f_.list_.begin(), f_.list_.end()),
         chunk_crlf());
@@ -257,7 +259,7 @@ writer(basic_fields const& f,
 
     string_view sv;
     if(! f_.target_or_reason_.empty())
-        sv = f_.target_or_reason_;
+        sv = f_.target_or_reason_.view();
     else
         sv = obsolete_reason(static_cast<status>(code));
 
@@ -646,7 +648,7 @@ erase(string_view name)
 {
     std::size_t n =0;
     set_.erase_and_dispose(name, key_compare{},
-        [&](element* e)
+        [&](element_ptr_t const& e)
         {
             ++n;
             list_.erase(list_.iterator_to(*e));
@@ -894,7 +896,7 @@ string_view
 basic_fields<Allocator>::
 get_method_impl() const
 {
-    return method_;
+    return method_.view();
 }
 
 template<class Allocator>
@@ -904,10 +906,8 @@ basic_fields<Allocator>::
 get_target_impl() const
 {
     if(target_or_reason_.empty())
-        return target_or_reason_;
-    return {
-        target_or_reason_.data() + 1,
-        target_or_reason_.size() - 1};
+        return {};
+    return target_or_reason_.view().substr(1);
 }
 
 template<class Allocator>
@@ -916,7 +916,7 @@ string_view
 basic_fields<Allocator>::
 get_reason_impl() const
 {
-    return target_or_reason_;
+    return target_or_reason_.view();
 }
 
 template<class Allocator>
@@ -1174,7 +1174,8 @@ new_element(field name,
     auto const p = alloc_traits::allocate(a,
         (sizeof(element) + off + len + 2 + sizeof(align_type) - 1) /
             sizeof(align_type));
-    return *(::new(p) element(name, sname, value));
+    return *(::new(static_cast<void*>(boost::to_address(p)))
+        element(name, sname, value));
 }
 
 template<class Allocator>
@@ -1187,7 +1188,7 @@ delete_element(element& e)
         (sizeof(element) + e.off_ + e.len_ + 2 + sizeof(align_type) - 1) /
             sizeof(align_type);
     e.~element();
-    alloc_traits::deallocate(a, &e, n);
+    alloc_traits::deallocate(a, pointer_traits<element_ptr_t>::pointer_to(e), n);
         //reinterpret_cast<align_type*>(&e), n);
 }
 
@@ -1224,22 +1225,21 @@ set_element(element& e)
 template<class Allocator>
 void
 basic_fields<Allocator>::
-realloc_string(string_view& dest, string_view s)
+realloc_string(allocated_string_t& dest, string_view s)
 {
     if(dest.empty() && s.empty())
         return;
     auto a = typename beast::detail::allocator_traits<
         Allocator>::template rebind_alloc<
             char>(this->get());
-    char* p = nullptr;
+    char_pointer_t p{};
     if(! s.empty())
     {
         p = a.allocate(s.size());
-        s.copy(p, s.size());
+        s.copy(boost::to_address(p), s.size());
     }
-    if(! dest.empty())
-        a.deallocate(const_cast<char*>(
-            dest.data()), dest.size());
+    if(!dest.empty())
+        a.deallocate(dest.p, dest.len);
     if(p)
         dest = {p, s.size()};
     else
@@ -1250,26 +1250,27 @@ template<class Allocator>
 void
 basic_fields<Allocator>::
 realloc_target(
-    string_view& dest, string_view s)
+    allocated_string_t& dest, string_view s)
 {
     // The target string are stored with an
     // extra space at the beginning to help
     // the writer class.
-    if(dest.empty() && s.empty())
+    if(dest.len == 0 && s.empty())
         return;
     auto a = typename beast::detail::allocator_traits<
         Allocator>::template rebind_alloc<
             char>(this->get());
-    char* p = nullptr;
+    char_pointer_t p{};
+
     if(! s.empty())
     {
         p = a.allocate(1 + s.size());
-        p[0] = ' ';
-        s.copy(p + 1, s.size());
+        char* pc = boost::to_address(p);
+        pc[0] = ' ';
+        s.copy(pc + 1, s.size());
     }
-    if(! dest.empty())
-        a.deallocate(const_cast<char*>(
-            dest.data()), dest.size());
+    if(dest.len != 0)
+        a.deallocate(dest.p, dest.len);
     if(p)
         dest = {p, 1 + s.size()};
     else
@@ -1284,9 +1285,9 @@ copy_all(basic_fields<OtherAlloc> const& other)
 {
     for(auto const& e : other.list_)
         insert(e.name(), e.name_string(), e.value());
-    realloc_string(method_, other.method_);
+    realloc_string(method_, other.method_.view());
     realloc_string(target_or_reason_,
-        other.target_or_reason_);
+        other.target_or_reason_.view());
 }
 
 template<class Allocator>

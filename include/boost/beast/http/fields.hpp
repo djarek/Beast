@@ -17,6 +17,7 @@
 #include <boost/beast/http/field.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/core/empty_value.hpp>
+#include <boost/core/pointer_traits.hpp>
 #include <boost/intrusive/list.hpp>
 #include <boost/intrusive/set.hpp>
 #include <boost/optional.hpp>
@@ -31,6 +32,30 @@
 namespace boost {
 namespace beast {
 namespace http {
+namespace detail {
+
+template <class Pointer>
+struct allocated_string
+{
+    Pointer p;
+    std::size_t len;
+
+    string_view view() const
+    {
+        if(empty())
+        {
+            return {};
+        }
+        return string_view{boost::to_address(p), len};
+    }
+
+    bool empty() const noexcept
+    {
+        return len == 0;
+    }
+};
+
+}
 
 /** A container for storing HTTP header fields.
 
@@ -56,9 +81,9 @@ class basic_fields
 #endif
 {
     // Fancy pointers are not supported
-    static_assert(std::is_pointer<typename
-        std::allocator_traits<Allocator>::pointer>::value,
-        "Allocator must use regular pointers");
+    // static_assert(std::is_pointer<typename
+    //     std::allocator_traits<Allocator>::pointer>::value,
+    //     "Allocator must use regular pointers");
 
     friend class fields_test; // for `header`
 
@@ -67,12 +92,14 @@ class basic_fields
     struct element;
 
     using off_t = std::uint16_t;
-
+    using char_pointer_t = typename beast::detail::allocator_traits<typename beast::detail::allocator_traits<
+        Allocator>::template rebind_alloc<char>>::pointer;
+    using allocated_string_t = detail::allocated_string<char_pointer_t>;
 public:
     /// The type of allocator used.
     using allocator_type = Allocator;
 
-    /// The type of element used to represent a field 
+    /// The type of element used to represent a field
     class value_type
     {
         friend class basic_fields;
@@ -169,11 +196,17 @@ public:
 #endif
 
 private:
+    using element_ptr_t = typename beast::detail::allocator_traits<typename beast::detail::allocator_traits<
+        Allocator>::template rebind_alloc<element>>::pointer;
+    using void_ptr_t = typename pointer_traits<element_ptr_t>::template rebind<void>;
+
     struct element
         : public boost::intrusive::list_base_hook<
+            intrusive::void_pointer<element_ptr_t>,
             boost::intrusive::link_mode<
                 boost::intrusive::normal_link>>
         , public boost::intrusive::set_base_hook<
+            intrusive::void_pointer<element_ptr_t>,
             boost::intrusive::link_mode<
                 boost::intrusive::normal_link>>
         , public value_type
@@ -720,11 +753,10 @@ private:
     set_element(element& e);
 
     void
-    realloc_string(string_view& dest, string_view s);
+    realloc_string(allocated_string_t& dest, string_view s);
 
     void
-    realloc_target(
-        string_view& dest, string_view s);
+    realloc_target(allocated_string_t& dest, string_view s);
 
     template<class OtherAlloc>
     void
@@ -756,8 +788,8 @@ private:
 
     set_t set_;
     list_t list_;
-    string_view method_;
-    string_view target_or_reason_;
+    allocated_string_t method_ = {};
+    allocated_string_t target_or_reason_ = {};
 };
 
 /// A typical HTTP header fields container

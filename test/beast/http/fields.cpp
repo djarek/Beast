@@ -846,10 +846,10 @@ public:
 
         res.content_length(0);
         BEAST_EXPECT(res[field::content_length] == "0");
-        
+
         res.content_length(100);
         BEAST_EXPECT(res[field::content_length] == "100");
-        
+
         res.content_length(boost::none);
         BEAST_EXPECT(res.count(field::content_length) == 0);
 
@@ -857,12 +857,12 @@ public:
         res.content_length(0);
         BEAST_EXPECT(res[field::content_length] == "0");
         BEAST_EXPECT(res.count(field::transfer_encoding) == 0);
-        
+
         res.set(field::transfer_encoding, "chunked");
         res.content_length(100);
         BEAST_EXPECT(res[field::content_length] == "100");
         BEAST_EXPECT(res.count(field::transfer_encoding) == 0);
-        
+
         res.set(field::transfer_encoding, "chunked");
         res.content_length(boost::none);
         BEAST_EXPECT(res.count(field::content_length) == 0);
@@ -874,12 +874,12 @@ public:
             res.content_length(0);
             BEAST_EXPECT(res[field::content_length] == "0");
             BEAST_EXPECT(res[field::transfer_encoding] == s);
-        
+
             res.set(field::transfer_encoding, s);
             res.content_length(100);
             BEAST_EXPECT(res[field::content_length] == "100");
             BEAST_EXPECT(res[field::transfer_encoding] == s);
-        
+
             res.set(field::transfer_encoding, s);
             res.content_length(boost::none);
             BEAST_EXPECT(res.count(field::content_length) == 0);
@@ -889,12 +889,12 @@ public:
             res.content_length(0);
             BEAST_EXPECT(res[field::content_length] == "0");
             BEAST_EXPECT(res[field::transfer_encoding] == s);
-        
+
             res.set(field::transfer_encoding, s + ", chunked");
             res.content_length(100);
             BEAST_EXPECT(res[field::content_length] == "100");
             BEAST_EXPECT(res[field::transfer_encoding] == s);
-        
+
             res.set(field::transfer_encoding, s + ", chunked");
             res.content_length(boost::none);
             BEAST_EXPECT(res.count(field::content_length) == 0);
@@ -904,12 +904,12 @@ public:
             res.content_length(0);
             BEAST_EXPECT(res[field::content_length] == "0");
             BEAST_EXPECT(res[field::transfer_encoding] == "chunked, " + s);
-        
+
             res.set(field::transfer_encoding, "chunked, " + s);
             res.content_length(100);
             BEAST_EXPECT(res[field::content_length] == "100");
             BEAST_EXPECT(res[field::transfer_encoding] == "chunked, " + s);
-        
+
             res.set(field::transfer_encoding, "chunked, " + s);
             res.content_length(boost::none);
             BEAST_EXPECT(res.count(field::content_length) == 0);
@@ -987,6 +987,135 @@ public:
         BEAST_EXPECT(res[field::transfer_encoding] == "chunked, foo");
     }
 
+    template <class T>
+    struct offset_ptr
+    {
+        constexpr offset_ptr(std::nullptr_t) noexcept
+            : offset_ptr()
+        {
+        }
+
+        constexpr offset_ptr() noexcept
+            : offset_(1)
+        {
+        }
+
+        template <class U, class = decltype(std::declval<T*&>() = (U*)nullptr)>
+        offset_ptr(offset_ptr<U> const& other)
+            : offset_ptr{other.to_address(other)}
+        {
+        }
+
+        template <class U, class = decltype(std::declval<T*&>() = (U*)nullptr)>
+        explicit offset_ptr(U* u) noexcept
+        {
+            if (u == nullptr)
+                offset_ = 1;
+            else
+            {
+                offset_ = ((std::uintptr_t)this - (std::uintptr_t)u);
+                assert(offset_ != 1);
+            }
+        }
+
+        offset_ptr(offset_ptr const& other) noexcept
+            : offset_ptr{to_address(other)}
+        {
+        }
+
+        offset_ptr& operator=(offset_ptr const& other) noexcept
+        {
+            auto* p = to_address(other);
+            if (p != nullptr)
+            {
+                offset_ = ((std::uintptr_t)this - (std::uintptr_t)p);
+                assert(offset_ != 1);
+            }
+            else
+                offset_ = 1;
+            return *this;
+        }
+
+        T& operator*() const
+        {
+            return *to_address(*this);
+        }
+
+        T* operator->() const
+        {
+            return to_address(*this);
+        }
+
+        explicit operator bool() const noexcept
+        {
+            return offset_ != 1;
+        }
+
+        friend bool operator==(offset_ptr const& l, offset_ptr const& r) noexcept
+        {
+            return to_address(l) == to_address(r);
+        }
+
+        friend bool operator!=(offset_ptr const& l, offset_ptr const& r) noexcept
+        {
+            return !(l == r);
+        }
+
+        static offset_ptr pointer_to(T& t) noexcept
+        {
+            return offset_ptr{std::addressof(t)};
+        }
+
+        static T* to_address(offset_ptr const& p) noexcept
+        {
+            if (p.offset_ == 1)
+                return nullptr;
+            return (T*)((std::uintptr_t)&p - p.offset_);
+        }
+
+    private:
+        std::uintptr_t offset_;
+    };
+
+    template <class T>
+    struct offset_allocator
+    {
+        offset_allocator() = default;
+
+        template <class U>
+        offset_allocator(offset_allocator<U> const& a)
+        {
+        }
+
+        using value_type = T;
+        using pointer = offset_ptr<T>;
+
+        pointer allocate(std::size_t n)
+        {
+            return pointer{(T*)::operator new(sizeof(T) * n)};
+        }
+
+        void deallocate(pointer p, std::size_t)
+        {
+            ::operator delete(pointer::to_address(p));
+        }
+    };
+
+    void testFancyPointers()
+    {
+        basic_fields<offset_allocator<char>> fields;
+        fields.insert("a", "a");
+        BEAST_EXPECT(std::distance(fields.begin(), fields.end()) == 1);
+        BEAST_EXPECT(fields["a"] == "a");
+        fields.insert("b", "b");
+        BEAST_EXPECT(std::distance(fields.begin(), fields.end()) == 2);
+        BEAST_EXPECT(fields["a"] == "a");
+        BEAST_EXPECT(fields["b"] == "b");
+        fields.erase("a");
+        BEAST_EXPECT(std::distance(fields.begin(), fields.end()) == 1);
+        BEAST_EXPECT(fields["b"] == "b");
+    }
+
     void
     run() override
     {
@@ -1001,6 +1130,7 @@ public:
         testKeepAlive();
         testContentLength();
         testChunked();
+        testFancyPointers();
     }
 };
 
