@@ -62,7 +62,7 @@ to_string(verb v)
 
     case verb::link:          return "LINK";
     case verb::unlink:        return "UNLINK";
-    
+
     case verb::unknown:
         return "<unknown>";
     }
@@ -110,21 +110,6 @@ string_to_verb(string_view v)
 */
     if(v.size() < 3)
         return verb::unknown;
-    // s must be null terminated
-    auto const eq =
-        [](string_view sv, char const* s)
-        {
-            auto p = sv.data();
-            for(;;)
-            {
-                if(*s != *p)
-                    return false;
-                ++s;
-                ++p;
-                if(! *s)
-                    return p == (sv.data() + sv.size());
-            }
-        };
     auto c = v[0];
     v.remove_prefix(1);
     switch(c)
@@ -135,7 +120,7 @@ string_to_verb(string_view v)
         break;
 
     case 'B':
-        if(v == "IND")
+        if(v =="IND")
             return verb::bind;
         break;
 
@@ -145,14 +130,14 @@ string_to_verb(string_view v)
         switch(c)
         {
         case 'H':
-            if(eq(v, "ECKOUT"))
+            if(v == "ECKOUT")
                 return verb::checkout;
             break;
 
         case 'O':
-            if(eq(v, "NNECT"))
+            if(v == "NNECT")
                 return verb::connect;
-            if(eq(v, "PY"))
+            if(v == "PY")
                 return verb::copy;
             BOOST_FALLTHROUGH;
 
@@ -162,24 +147,24 @@ string_to_verb(string_view v)
         break;
 
     case 'D':
-        if(eq(v, "ELETE"))
+        if(v == "ELETE")
             return verb::delete_;
         break;
 
     case 'G':
-        if(eq(v, "ET"))
+        if(v == "ET")
             return verb::get;
         break;
 
     case 'H':
-        if(eq(v, "EAD"))
+        if(v == "EAD")
             return verb::head;
         break;
 
     case 'L':
-        if(eq(v, "INK"))
+        if(v == "INK")
             return verb::link;
-        if(eq(v, "OCK"))
+        if(v == "OCK")
             return verb::lock;
         break;
 
@@ -189,31 +174,31 @@ string_to_verb(string_view v)
         switch(c)
         {
         case '-':
-            if(eq(v, "SEARCH"))
+            if(v == "SEARCH")
                 return verb::msearch;
             break;
 
         case 'E':
-            if(eq(v, "RGE"))
+            if(v == "RGE")
                 return verb::merge;
             break;
 
         case 'K':
-            if(eq(v, "ACTIVITY"))
+            if(v == "ACTIVITY")
                 return verb::mkactivity;
             if(v[0] == 'C')
             {
                 v.remove_prefix(1);
-                if(eq(v, "ALENDAR"))
+                if(v == "ALENDAR")
                     return verb::mkcalendar;
-                if(eq(v, "OL"))
+                if(v == "OL")
                     return verb::mkcol;
                 break;
             }
             break;
-        
+
         case 'O':
-            if(eq(v, "VE"))
+            if(v == "VE")
                 return verb::move;
             BOOST_FALLTHROUGH;
 
@@ -223,12 +208,12 @@ string_to_verb(string_view v)
         break;
 
     case 'N':
-        if(eq(v, "OTIFY"))
+        if(v == "OTIFY")
             return verb::notify;
         break;
 
     case 'O':
-        if(eq(v, "PTIONS"))
+        if(v == "PTIONS")
             return verb::options;
         break;
 
@@ -238,26 +223,26 @@ string_to_verb(string_view v)
         switch(c)
         {
         case 'A':
-            if(eq(v, "TCH"))
+            if(v == "TCH")
                 return verb::patch;
             break;
 
         case 'O':
-            if(eq(v, "ST"))
+            if(v == "ST")
                 return verb::post;
             break;
 
         case 'R':
-            if(eq(v, "OPFIND"))
+            if(v == "OPFIND")
                 return verb::propfind;
-            if(eq(v, "OPPATCH"))
+            if(v == "OPPATCH")
                 return verb::proppatch;
             break;
 
         case 'U':
-            if(eq(v, "RGE"))
+            if(v == "RGE")
                 return verb::purge;
-            if(eq(v, "T"))
+            if(v == "T")
                 return verb::put;
             BOOST_FALLTHROUGH;
 
@@ -270,21 +255,21 @@ string_to_verb(string_view v)
         if(v[0] != 'E')
             break;
         v.remove_prefix(1);
-        if(eq(v, "BIND"))
+        if(v == "BIND")
             return verb::rebind;
-        if(eq(v, "PORT"))
+        if(v == "PORT")
             return verb::report;
         break;
 
     case 'S':
-        if(eq(v, "EARCH"))
+        if(v == "EARCH")
             return verb::search;
-        if(eq(v, "UBSCRIBE"))
+        if(v == "UBSCRIBE")
             return verb::subscribe;
         break;
 
     case 'T':
-        if(eq(v, "RACE"))
+        if(v == "RACE")
             return verb::trace;
         break;
 
@@ -292,13 +277,13 @@ string_to_verb(string_view v)
         if(v[0] != 'N')
             break;
         v.remove_prefix(1);
-        if(eq(v, "BIND"))
+        if(v == "BIND")
             return verb::unbind;
-        if(eq(v, "LINK"))
+        if(v == "LINK")
             return verb::unlink;
-        if(eq(v, "LOCK"))
+        if(v == "LOCK")
             return verb::unlock;
-        if(eq(v, "SUBSCRIBE"))
+        if(v == "SUBSCRIBE")
             return verb::unsubscribe;
         break;
 
