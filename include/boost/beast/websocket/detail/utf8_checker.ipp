@@ -205,46 +205,22 @@ write(std::uint8_t const* in, std::size_t size)
         p_ = cp_;
     }
 
+
+    BOOST_STATIC_ASSERT(sizeof(std::size_t) >= 4);
     if(size <= sizeof(std::size_t))
         goto slow;
-
-    // Align `in` to sizeof(std::size_t) boundary
-    {
-        auto const in0 = in;
-        auto last = reinterpret_cast<std::uint8_t const*>(
-            ((reinterpret_cast<std::uintptr_t>(in) + sizeof(std::size_t) - 1) /
-                sizeof(std::size_t)) * sizeof(std::size_t));
-
-        // Check one character at a time for low-ASCII
-        while(in < last)
-        {
-            if(*in & 0x80)
-            {
-                // Not low-ASCII so switch to slow loop
-                size = size - (in - in0);
-                goto slow;
-            }
-            ++in;
-        }
-        size = size - (in - in0);
-    }
 
     // Fast loop: Process 4 or 8 low-ASCII characters at a time
     {
         auto const in0 = in;
-        auto last = in + size - 7;
+        auto last = in + size - sizeof(std::size_t);
         auto constexpr mask = static_cast<
             std::size_t>(0x8080808080808080 & ~std::size_t{0});
         while(in < last)
         {
-#if 0
             std::size_t temp;
             std::memcpy(&temp, in, sizeof(temp));
             if((temp & mask) != 0)
-#else
-            // Technically UB but works on all known platforms
-            if((*reinterpret_cast<std::size_t const*>(in) & mask) != 0)
-#endif
             {
                 size = size - (in - in0);
                 goto slow;
@@ -252,7 +228,7 @@ write(std::uint8_t const* in, std::size_t size)
             in += sizeof(std::size_t);
         }
         // There's at least one more full code point left
-        last += 4;
+        last += sizeof(std::size_t);
         while(in < last)
             if(! valid(in))
                 return false;
