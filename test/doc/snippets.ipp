@@ -15,7 +15,6 @@ namespace net = boost::asio;
 namespace ssl = boost::asio::ssl;
 using tcp     = net::ip::tcp;
 
-error_code ec;
 net::io_context ioc;
 auto work = net::make_work_guard(ioc);
 std::thread t{[&](){ ioc.run(); }};
